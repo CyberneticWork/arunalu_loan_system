@@ -84,6 +84,7 @@ export function SearchClient({ clients, onAddNewClick, loading, onSearch, search
             <option value="nic">NIC</option>
             <option value="id">Customer ID</option>
             <option value="telno">Telephone No</option>
+            <option value="location">Branch</option>
           </select>
           <input
             className="border rounded px-2 py-1 flex-1"

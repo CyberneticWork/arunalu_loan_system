@@ -54,6 +54,10 @@ export async function GET(req) {
             sql += 'telno LIKE ?';
             params.push(`%${query}%`);
             break;
+          case 'location':
+            sql += 'location LIKE ?';
+            params.push(`%${query}%`);
+            break;
           default:
             return NextResponse.json({ error: 'Unknown filter' }, { status: 400 });
         }
