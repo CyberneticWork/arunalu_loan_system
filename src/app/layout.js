@@ -2,7 +2,7 @@ import "./globals.css";
 import ChildRender from "@/components/main/ChildHandling";
 
 export const metadata = {
-  title: "TrustWin | Loan Management System",
+  title: "Arunalu Lanka | Loan Management System",
   description:
     "We provide best financial solutions and services to the customers through building strong relationships as a trusted friend to enhancing their quality of life.",
 };
