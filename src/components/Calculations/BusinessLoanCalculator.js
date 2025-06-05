@@ -14,7 +14,7 @@ export const BusinessLoanCalculator = (
   const serviceChargeAmount = Number(serviceCharge);
   
   // Define standard periods
-  const DAYS_PER_MONTH = 20; // Consistently using 20 days per month
+  const DAYS_PER_MONTH = 30; // Consistently using 30 days per month
   const DAYS_PER_YEAR = 365;
   const MONTHS_PER_YEAR = 12;
   const WEEKS_PER_YEAR = 52;
