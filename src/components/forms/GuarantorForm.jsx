@@ -51,48 +51,38 @@ export function GuarantorForm({
           return "Invalid phone format (0XXXXXXXXX or +94XXXXXXXXX)";
         break;
       case "occupation":
-        if (!value || value.trim().length < 2)
-          return "Occupation is required";
+        if (!value || value.trim().length < 2) return "Occupation is required";
         break;
       case "monthlyIncome":
         if (isNaN(Number(value)) || Number(value) <= 0)
           return "Monthly income must be greater than 0";
         break;
       case "gender":
-        if (value === undefined)
-          return "Gender is required";
+        if (value === undefined) return "Gender is required";
         break;
       case "dob":
-        if (!value)
-          return "Date of Birth is required";
+        if (!value) return "Date of Birth is required";
         break;
       case "relation":
-        if (!value)
-          return "Relation is required";
+        if (!value) return "Relation is required";
         break;
       case "province":
-        if (!value)
-          return "Province is required";
+        if (!value) return "Province is required";
         break;
       case "gs":
-        if (!value)
-          return "GS Division is required";
+        if (!value) return "GS Division is required";
         break;
       case "ds":
-        if (!value)
-          return "DS Office is required";
+        if (!value) return "DS Office is required";
         break;
       case "district":
-        if (!value)
-          return "District is required";
+        if (!value) return "District is required";
         break;
       case "accountno":
-        if (!value)
-          return "Bank Account No is required";
+        if (!value) return "Bank Account No is required";
         break;
       case "bankname":
-        if (!value)
-          return "Bank Name is required";
+        if (!value) return "Bank Name is required";
         break;
       default:
         return "";
@@ -199,7 +189,7 @@ export function GuarantorForm({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-xl">
         <h3 className="text-xl font-semibold mb-6">
           {editingIndex !== null
@@ -368,6 +358,7 @@ export function GuarantorForm({
               <Input
                 type="date"
                 value={guarantorForm.dob}
+                max={new Date().toISOString().split("T")[0]} // disables future dates
                 onChange={(e) =>
                   onChange({ ...guarantorForm, dob: e.target.value })
                 }
@@ -487,9 +478,15 @@ export function GuarantorForm({
                 Bank Account No <span className="text-red-500">*</span>
               </Label>
               <Input
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={guarantorForm.accountno}
                 onChange={(e) =>
-                  onChange({ ...guarantorForm, accountno: e.target.value })
+                  onChange({
+                    ...guarantorForm,
+                    accountno: e.target.value.replace(/\D/g, ""),
+                  })
                 }
                 onBlur={() => handleBlur("accountno")}
                 placeholder="Account Number"
