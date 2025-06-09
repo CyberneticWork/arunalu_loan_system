@@ -139,11 +139,9 @@ export default function Home() {
       submittedAt: new Date().toISOString(),
     };
 
-    // Encode the data to pass via URL
-    const encodedData = btoa(encodeURIComponent(JSON.stringify(formData)));
-
-    // Navigate to submission page with data
-    router.push(`/loans/submitForm?data=${encodedData}`);
+    // Store data in sessionStorage before navigation
+    sessionStorage.setItem("loanFormData", JSON.stringify(formData));
+    router.push("/loans/submitForm");
   };
 
   const financialProducts = [
