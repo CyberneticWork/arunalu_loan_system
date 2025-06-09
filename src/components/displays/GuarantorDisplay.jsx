@@ -1,10 +1,6 @@
 import { Button } from "@/components/ui/button";
 
-export function GuarantorDisplay({ 
-  guarantors, 
-  onEdit, 
-  onRemove 
-}) {
+export function GuarantorDisplay({ guarantors, onEdit, onRemove }) {
   if (guarantors.length === 0) {
     return <p className="text-sm text-gray-500">No guarantors added yet</p>;
   }
@@ -27,11 +23,12 @@ export function GuarantorDisplay({
               <span className="text-gray-500">Phone:</span> {guarantor.phone}
             </p>
             <p className="text-sm">
-              <span className="text-gray-500">Occupation:</span> {guarantor.occupation}
+              <span className="text-gray-500">Occupation:</span>{" "}
+              {guarantor.occupation}
             </p>
             <p className="text-sm">
-              <span className="text-gray-500">Monthly Income:</span>{" "}
-              LKR {Number(guarantor.monthlyIncome).toLocaleString()}
+              <span className="text-gray-500">Monthly Income:</span> LKR{" "}
+              {Number(guarantor.monthlyIncome).toLocaleString()}
             </p>
           </div>
           <div className="flex gap-2 mt-4">
