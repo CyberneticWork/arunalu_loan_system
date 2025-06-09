@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
 
-export function LoanSubmissionDisplay({ 
-  loanData, 
+export function LoanSubmissionDisplay({
+  loanData,
   guarantors,
   onAddGuarantor,
   onEditGuarantor,
-  onRemoveGuarantor 
+  onRemoveGuarantor,
 }) {
   return (
     <>
@@ -72,7 +72,8 @@ export function LoanSubmissionDisplay({
           <div>
             <label className="text-sm text-gray-500">Loan Amount</label>
             <p className="font-medium">
-              LKR {Number(loanData.loanAmount).toLocaleString(undefined, {
+              LKR{" "}
+              {Number(loanData.loanAmount).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
@@ -85,7 +86,8 @@ export function LoanSubmissionDisplay({
           <div>
             <label className="text-sm text-gray-500">Service Charge</label>
             <p className="font-medium">
-              LKR {Number(loanData.serviceCharge).toLocaleString(undefined, {
+              LKR{" "}
+              {Number(loanData.serviceCharge).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
@@ -94,7 +96,8 @@ export function LoanSubmissionDisplay({
           <div>
             <label className="text-sm text-gray-500">Total Amount</label>
             <p className="font-medium text-green-700">
-              LKR {Number(loanData.totalAmount).toLocaleString(undefined, {
+              LKR{" "}
+              {Number(loanData.totalAmount).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
@@ -127,20 +130,23 @@ export function LoanSubmissionDisplay({
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm">
-                    <span className="text-gray-500">Name:</span> {guarantor.name}
+                    <span className="text-gray-500">Name:</span>{" "}
+                    {guarantor.name}
                   </p>
                   <p className="text-sm">
                     <span className="text-gray-500">NIC:</span> {guarantor.nic}
                   </p>
                   <p className="text-sm">
-                    <span className="text-gray-500">Phone:</span> {guarantor.phone}
+                    <span className="text-gray-500">Phone:</span>{" "}
+                    {guarantor.phone}
                   </p>
                   <p className="text-sm">
-                    <span className="text-gray-500">Occupation:</span> {guarantor.occupation}
+                    <span className="text-gray-500">Occupation:</span>{" "}
+                    {guarantor.occupation}
                   </p>
                   <p className="text-sm">
-                    <span className="text-gray-500">Monthly Income:</span>{" "}
-                    LKR {Number(guarantor.monthlyIncome).toLocaleString()}
+                    <span className="text-gray-500">Monthly Income:</span> LKR{" "}
+                    {Number(guarantor.monthlyIncome).toLocaleString()}
                   </p>
                 </div>
                 <div className="flex gap-2 mt-4">
