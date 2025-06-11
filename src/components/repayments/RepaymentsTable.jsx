@@ -190,6 +190,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                   <TableHead>Loan Type</TableHead>
                   <TableHead>Payment Mode</TableHead>
                   <TableHead>Total Amount</TableHead>
+                  <TableHead>Settlement</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -233,6 +234,17 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                         LKR {Number(payment.Totalpay).toLocaleString()}
                       </TableCell>
                       <TableCell>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            Number(payment.remainingAmount) === 0
+                              ? "bg-green-100 text-green-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          LKR {Number(payment.remainingAmount).toLocaleString()}
+                        </span>
+                      </TableCell>
+                      <TableCell>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -243,11 +255,6 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                           }`}
                           onClick={() => handleViewPayment(payment)}
                           disabled={isPaymentDisabled}
-                          title={
-                            isPaymentDisabled
-                              ? "Cannot make payment when more than 2 records are selected"
-                              : ""
-                          }
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           <span className="hidden sm:inline">Make Payment</span>
@@ -258,7 +265,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={10}
+                      colSpan={11} // Update from 10 to 11 to account for new column
                       className="text-center py-10 text-gray-500"
                     >
                       No repayments found
