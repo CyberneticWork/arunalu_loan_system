@@ -69,8 +69,8 @@ export function LoanSubmissionDisplay({
       if (apiData.code === "SUCCESS") {
         setNotification("Loan submitted successfully!");
         setTimeout(() => {
-          // router.push("/your-loan-details-page"); // Uncomment when developed
-          router.push("/loans"); // Redirect to loan types page for now
+          // router.push("/your-loan-details-page"); // add redirect path
+          router.push("/loans/0"); // Redirect to loan types page for now
         }, 2000);
       } else {
         setNotification("Failed to submit loan. Please try again.");
@@ -80,7 +80,9 @@ export function LoanSubmissionDisplay({
     } catch (e) {
       console.error("Loan submission error:", e); // <-- Add this line
       setResult({ error: e.message });
-      setNotification("An error occurred. Please try again. " + (e.message || ""));
+      setNotification(
+        "An error occurred. Please try again. " + (e.message || "")
+      );
     }
     setLoading(false);
   };
@@ -289,14 +291,23 @@ export function LoanSubmissionDisplay({
               {new Date(loanData.submittedAt).toLocaleDateString()}
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
             <button
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              className={`px-4 py-2 rounded-md text-white ${
+                loading || guarantors.length === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-600 hover:bg-green-700"
+              }`}
               onClick={handleConfirmProcess}
-              disabled={loading}
+              disabled={loading || guarantors.length === 0}
             >
               {loading ? "Processing..." : "Confirm & Process"}
             </button>
+            {guarantors.length === 0 && (
+              <span className="text-xs text-red-500 ml-2">
+                Add at least 1 guarantor
+              </span>
+            )}
           </div>
         </div>
         {result && (
