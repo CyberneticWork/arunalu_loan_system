@@ -23,7 +23,7 @@ import {
 import { Search, Filter, Eye } from "lucide-react";
 import PaymentModal from "./PaymentModal";
 
-export default function RepaymentsTable({ data = [] }) {
+export default function RepaymentsTable({ data = [], onRefresh }) {
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [filters, setFilters] = useState({
     search: "",
@@ -316,6 +316,7 @@ export default function RepaymentsTable({ data = [] }) {
             : []
         }
         isMultiple={Array.isArray(selectedPayment)}
+        onPaymentComplete={onRefresh}
       />
     </>
   );

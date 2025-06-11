@@ -15,12 +15,14 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
 export default function PaymentModal({
   isOpen,
   onClose,
   payments = [],
   isMultiple,
+  onPaymentComplete, // Add this new prop
 }) {
   // Reset payment details when payments prop changes
   useEffect(() => {
@@ -47,6 +49,8 @@ export default function PaymentModal({
       : { amount: "", method: "cash" }
   );
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const totalAmount =
     payments?.reduce((sum, p) => sum + Number(p?.Totalpay || 0), 0) || 0;
 
@@ -60,16 +64,57 @@ export default function PaymentModal({
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Payment details:", {
-      isMultiple,
-      payments: isMultiple
-        ? paymentDetails
-        : { ...paymentDetails, customerId: payments[0]?.id },
-      totalAmount,
-    });
-    onClose();
+    setIsSubmitting(true);
+
+    try {
+      const paymentsToSubmit = isMultiple
+        ? paymentDetails.map((payment, index) => ({
+            loanId: payments[index].id,
+            loanAmount: Number(payments[index].Totalpay),
+            fullLoanAmount: Number(payments[index].Totalpay),
+            paidAmount: Number(payment.amount),
+            paymentMethod: payment.method,
+            setalment: Number(payments[index].Totalpay),
+          }))
+        : [
+            {
+              loanId: payments[0].id,
+              loanAmount: Number(payments[0].Totalpay),
+              fullLoanAmount: Number(payments[0].Totalpay),
+              paidAmount: Number(paymentDetails.amount),
+              paymentMethod: paymentDetails.method,
+              setalment: Number(payments[0].Totalpay),
+            },
+          ];
+
+      const response = await fetch("/api/repayments/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          payments: paymentsToSubmit,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.code === "SUCCESS") {
+        // Close modal on success
+        onClose();
+        // Trigger refresh of payments list
+        onPaymentComplete?.();
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      console.error("Error submitting payment:", error);
+      alert("Failed to submit payment"); // Simple error feedback
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!payments.length) return null;
@@ -233,7 +278,16 @@ export default function PaymentModal({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">Submit Payment{isMultiple ? "s" : ""}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Submitting...
+                </span>
+              ) : (
+                `Submit Payment${isMultiple ? "s" : ""}`
+              )}
+            </Button>
           </div>
         </form>
       </DialogContent>

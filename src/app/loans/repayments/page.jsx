@@ -7,21 +7,22 @@ export default function RepaymentsPage() {
   const [repayments, setRepayments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchRepayments = async () => {
-      try {
-        const response = await fetch("/api/repayments");
-        const data = await response.json();
-        if (data.code === "SUCCESS") {
-          setRepayments(data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching repayments:", error);
-      } finally {
-        setLoading(false);
+  const fetchRepayments = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/repayments");
+      const data = await response.json();
+      if (data.code === "SUCCESS") {
+        setRepayments(data.data);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching repayments:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchRepayments();
   }, []);
 
@@ -37,7 +38,7 @@ export default function RepaymentsPage() {
       {loading ? (
         <div className="text-center py-10">Loading repayments...</div>
       ) : (
-        <RepaymentsTable data={repayments} />
+        <RepaymentsTable data={repayments} onRefresh={fetchRepayments} />
       )}
     </div>
   );
