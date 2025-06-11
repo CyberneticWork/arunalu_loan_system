@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, Filter, Eye } from "lucide-react";
+import PaymentModal from "./PaymentModal";
 
 export default function RepaymentsTable({ data = [] }) {
   const [selectedRecords, setSelectedRecords] = useState([]);
@@ -32,6 +33,9 @@ export default function RepaymentsTable({ data = [] }) {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
 
   // Filter functions
   const filterData = (data) => {
@@ -60,237 +64,259 @@ export default function RepaymentsTable({ data = [] }) {
     currentPage * itemsPerPage
   );
 
-  // Add this helper function
-  const isPaymentDisabled = selectedRecords.length > 1;
+  // Update the isPaymentDisabled logic
+  const isPaymentDisabled = false; // Remove the previous limitation
 
+  // Update the handleMultiplePayments function
   const handleMultiplePayments = (selectedIds) => {
-    if (selectedIds.length === 0 || selectedIds.length > 2) return;
+    if (selectedIds.length === 0) return;
 
-    // Get the selected payment records
+    // Get all selected payment records
     const selectedPayments = data.filter((payment) =>
       selectedIds.includes(payment.id)
     );
 
-    // Handle the multiple payments logic here
-    console.log("Processing payments for:", selectedPayments);
+    setSelectedPayment(selectedPayments);
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleViewPayment = (payment) => {
+    setSelectedPayment(payment);
+    setIsPaymentModalOpen(true);
   };
 
   return (
-    <Card className="w-full shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xl font-semibold text-gray-800">
-          Loan Repayments
-        </CardTitle>
-      </CardHeader>
+    <>
+      <Card className="w-full shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl font-semibold text-gray-800">
+            Loan Repayments
+          </CardTitle>
+        </CardHeader>
 
-      <CardContent>
-        {/* Filters */}
-        <div className="mb-4 flex flex-col sm:flex-row gap-3 items-end justify-between">
-          {/* Left side with search and filters */}
-          <div className="flex flex-col sm:flex-row gap-3 flex-1">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-              <Input
-                placeholder="Search by contract number or customer..."
-                className="pl-9"
-                value={filters.search}
-                onChange={(e) =>
-                  setFilters({ ...filters, search: e.target.value })
-                }
-              />
+        <CardContent>
+          {/* Filters */}
+          <div className="mb-4 flex flex-col sm:flex-row gap-3 items-end justify-between">
+            {/* Left side with search and filters */}
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                <Input
+                  placeholder="Search by contract number or customer..."
+                  className="pl-9"
+                  value={filters.search}
+                  onChange={(e) =>
+                    setFilters({ ...filters, search: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 sm:flex gap-3">
+                <Select
+                  value={filters.status}
+                  onValueChange={(value) =>
+                    setFilters({ ...filters, status: value })
+                  }
+                >
+                  <SelectTrigger className="w-36">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={filters.dateRange}
+                  onValueChange={(value) =>
+                    setFilters({ ...filters, dateRange: value })
+                  }
+                >
+                  <SelectTrigger className="w-36">
+                    <SelectValue placeholder="Date Range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="week">This Week</SelectItem>
+                    <SelectItem value="month">This Month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:flex gap-3">
-              <Select
-                value={filters.status}
-                onValueChange={(value) =>
-                  setFilters({ ...filters, status: value })
-                }
-              >
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filters.dateRange}
-                onValueChange={(value) =>
-                  setFilters({ ...filters, dateRange: value })
-                }
-              >
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="Date Range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">This Week</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Right side with Multiple Payments button */}
+            <Button
+              variant="default"
+              size="sm"
+              className={`${
+                selectedRecords.length === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
+              disabled={selectedRecords.length === 0}
+              onClick={() => handleMultiplePayments(selectedRecords)}
+            >
+              Multiple Payments ({selectedRecords.length})
+            </Button>
           </div>
 
-          {/* Right side with Multiple Payments button */}
-          <Button
-            variant="default"
-            size="sm"
-            className={`${
-              selectedRecords.length === 0
-                ? "bg-gray-400 cursor-not-allowed"
-                : selectedRecords.length > 2
-                ? "bg-red-500 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
-            disabled={
-              selectedRecords.length === 0 || selectedRecords.length > 2
-            }
-            onClick={() => handleMultiplePayments(selectedRecords)}
-          >
-            Multiple Payments ({selectedRecords.length})
-          </Button>
-        </div>
-
-        {/* Table */}
-        <div className="rounded-md border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">
-                  <Checkbox
-                    checked={
-                      paginatedData.length > 0 &&
-                      selectedRecords.length === paginatedData.length
-                    }
-                    onCheckedChange={(checked) => {
-                      setSelectedRecords(
-                        checked ? paginatedData.map((p) => p.id) : []
-                      );
-                    }}
-                  />
-                </TableHead>
-                <TableHead>Contract No</TableHead>
-                <TableHead>Customer Name</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>GS Division</TableHead>
-                <TableHead>DS Office</TableHead>
-                <TableHead>Loan Type</TableHead>
-                <TableHead>Payment Mode</TableHead>
-                <TableHead>Total Amount</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedData.length > 0 ? (
-                paginatedData.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedRecords.includes(payment.id)}
-                        onCheckedChange={(checked) => {
-                          setSelectedRecords(
-                            checked
-                              ? [...selectedRecords, payment.id]
-                              : selectedRecords.filter(
-                                  (id) => id !== payment.id
-                                )
-                          );
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>{payment.telno}</TableCell>
-                    <TableCell>{payment.customerName}</TableCell>
-                    <TableCell>{payment.location}</TableCell>
-                    <TableCell>{payment.gs}</TableCell>
-                    <TableCell>{payment.ds}</TableCell>
-                    <TableCell>{payment.loanType}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium
+          {/* Table */}
+          <div className="rounded-md border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={
+                        paginatedData.length > 0 &&
+                        selectedRecords.length === paginatedData.length
+                      }
+                      onCheckedChange={(checked) => {
+                        setSelectedRecords(
+                          checked ? paginatedData.map((p) => p.id) : []
+                        );
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead>Contract No</TableHead>
+                  <TableHead>Customer Name</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>GS Division</TableHead>
+                  <TableHead>DS Office</TableHead>
+                  <TableHead>Loan Type</TableHead>
+                  <TableHead>Payment Mode</TableHead>
+                  <TableHead>Total Amount</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedData.length > 0 ? (
+                  paginatedData.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedRecords.includes(payment.id)}
+                          onCheckedChange={(checked) => {
+                            setSelectedRecords(
+                              checked
+                                ? [...selectedRecords, payment.id]
+                                : selectedRecords.filter(
+                                    (id) => id !== payment.id
+                                  )
+                            );
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>{payment.telno}</TableCell>
+                      <TableCell>{payment.customerName}</TableCell>
+                      <TableCell>{payment.location}</TableCell>
+                      <TableCell>{payment.gs}</TableCell>
+                      <TableCell>{payment.ds}</TableCell>
+                      <TableCell>{payment.loanType}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium
                     ${
                       payment.loanTypeMode === "group"
                         ? "bg-purple-100 text-purple-800"
                         : "bg-blue-100 text-blue-800"
                     }`}
-                      >
-                        {payment.loanTypeMode}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      LKR {Number(payment.Totalpay).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`h-8 px-2 ${
-                          isPaymentDisabled
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-blue-600"
-                        }`}
-                        onClick={() => handleViewPayment(payment)}
-                        disabled={isPaymentDisabled}
-                        title={
-                          isPaymentDisabled
-                            ? "Cannot make payment when more than 2 records are selected"
-                            : ""
-                        }
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        <span className="hidden sm:inline">Make Payment</span>
-                      </Button>
+                        >
+                          {payment.loanTypeMode}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        LKR {Number(payment.Totalpay).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-8 px-2 ${
+                            isPaymentDisabled
+                              ? "text-gray-400 cursor-not-allowed"
+                              : "text-blue-600"
+                          }`}
+                          onClick={() => handleViewPayment(payment)}
+                          disabled={isPaymentDisabled}
+                          title={
+                            isPaymentDisabled
+                              ? "Cannot make payment when more than 2 records are selected"
+                              : ""
+                          }
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Make Payment</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={10}
+                      className="text-center py-10 text-gray-500"
+                    >
+                      No repayments found
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={10}
-                    className="text-center py-10 text-gray-500"
-                  >
-                    No repayments found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-between items-center mt-4">
-            <div className="text-sm text-gray-500">
-              Page {currentPage} of {totalPages}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                }
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-            </div>
+                )}
+              </TableBody>
+            </Table>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center mt-4">
+              <div className="text-sm text-gray-500">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => {
+          setIsPaymentModalOpen(false);
+          setSelectedPayment(null);
+        }}
+        payments={
+          selectedPayment
+            ? Array.isArray(selectedPayment)
+              ? selectedPayment
+              : [selectedPayment]
+            : []
+        }
+        isMultiple={Array.isArray(selectedPayment)}
+      />
+    </>
   );
 }
