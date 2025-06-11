@@ -76,6 +76,7 @@ export default function Home() {
     id: "0",
     NIC: "0",
   });
+  
   const [loadingClient, setLoadingClient] = useState(false);
   const [clientError, setClientError] = useState("");
   const [croOfficers, setCroOfficers] = useState([]);
@@ -104,6 +105,9 @@ export default function Home() {
   const [newSubLoanName, setNewSubLoanName] = useState("");
   const [addingSubLoan, setAddingSubLoan] = useState(false);
   const [addSubLoanError, setAddSubLoanError] = useState("");
+
+  const [managers, setManagers] = useState([]);
+  const [selectedManager, setSelectedManager] = useState("Select Account Manager");
 
   // Handle form submission for loan application
   const handleSubmitLoan = () => {
@@ -185,6 +189,23 @@ export default function Home() {
     };
 
     fetchCROOfficers();
+  }, []);
+
+  // Fetch managers on mount
+  useEffect(() => {
+    const fetchManagers = async () => {
+      try {
+        const res = await fetch("/api/customer/Manager");
+        if (!res.ok) throw new Error("Failed to fetch managers");
+        const data = await res.json();
+        if (data.code === "SUCCESS") {
+          setManagers(data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching managers:", error);
+      }
+    };
+    fetchManagers();
   }, []);
 
   // Fetch officer ID from JWT on mount
@@ -271,6 +292,7 @@ export default function Home() {
       setClientData(customer);
     } else {
       setClientError("Client not found");
+      
     }
     setLoadingClient(false);
   };
@@ -354,8 +376,19 @@ export default function Home() {
     const amount = parseFloat(loanAmount) || 0;
     const interest = parseFloat(interestRate) || 0;
     const charge = parseFloat(serviceCharge) || 0;
-    const total = amount + (amount * interest) / 100 + charge;
-    setTotalAmount(total);
+    const duration = parseInt(loanDuration) || 0;
+    const frequency = loanFrequency; 
+
+    const result = calculateLoan({
+      principal: amount,
+      rate: interest,
+      term: duration,
+      paymentFrequency: frequency,
+      serviceCharge: charge,
+   
+    });
+
+    setTotalAmount(result.totalPayable || 0);
   };
 
   const handleAddLoanType = async () => {
@@ -435,52 +468,19 @@ export default function Home() {
                   </div>
 
                   <div className="mt-4 md:mt-0 md:ml-6 flex flex-col justify-center">
-                    <p className="text-sm text-gray-500 mb-2">
-                      Account Manager
-                    </p>
-                    {officerName && (
-                      <span className="text-blue-700 font-semibold bg-blue-50 px-3 py-1 rounded-md border border-blue-100 mb-2">
-                        Logged in as: {officerName}
-                      </span>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full md:w-60 flex justify-between items-center"
-                        >
-                          <span>{selectedOfficer}</span>
-                          <ChevronDown className="h-4 w-4 opacity-50" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="w-full md:w-60"
-                      >
-                        <div className="p-2">
-                          <Input
-                            placeholder="Search CRO Officer"
-                            value={croSearch}
-                            onChange={(e) => setCroSearch(e.target.value)}
-                            className="mb-2"
-                          />
-                        </div>
-                        {croOfficers
-                          .filter((officer) =>
-                            officer.name
-                              .toLowerCase()
-                              .includes(croSearch.toLowerCase())
-                          )
-                          .map((officer) => (
-                            <DropdownMenuItem
-                              key={officer.id}
-                              onClick={() => setSelectedOfficer(officer.name)}
-                            >
-                              {officer.name} ({officer.empid})
-                            </DropdownMenuItem>
-                          ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Label className="text-sm mb-1">Select Account Manager</Label>
+                    <select
+                      className="border rounded-md px-3 py-2 w-full mt-1"
+                      value={selectedManager}
+                      onChange={(e) => setSelectedManager(e.target.value)}
+                    >
+                      <option disabled>Select Account Manager</option>
+                      {managers.map((manager) => (
+                        <option key={manager.id} value={manager.name}>
+                          {manager.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </CardContent>
@@ -670,7 +670,7 @@ export default function Home() {
                     {/* Loan Duration */}
                     <div className="space-y-2">
                       <Label className="flex items-center">
-                        Loan Duration (in days){" "}
+                        Loan Duration{" "}
                         <span className="text-red-500 ml-1">*</span>
                       </Label>
                       <Input
@@ -873,12 +873,7 @@ export function EquipmentLoan() {
                 </div>
 
                 <div className="mt-4 md:mt-0 md:ml-6 flex flex-col justify-center">
-                  <p className="text-sm text-gray-500 mb-2">Account Manager</p>
-                  {officerName && (
-                    <span className="text-purple-700 font-semibold bg-purple-50 px-3 py-1 rounded-md border border-purple-100 mb-2">
-                      Logged in as: {officerName}
-                    </span>
-                  )}
+                
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
