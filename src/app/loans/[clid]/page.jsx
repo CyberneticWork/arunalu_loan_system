@@ -125,6 +125,7 @@ export default function Home() {
       loanFrequency,
       loanDuration: parseInt(loanDuration) || 0,
       selectedSubLoanCategory,
+      selectedManager,
 
       // Client Information
       clientInfo: {
@@ -478,7 +479,7 @@ export default function Home() {
                     >
                       <option disabled>Select Account Manager</option>
                       {managers.map((manager) => (
-                        <option key={manager.id} value={manager.name}>
+                        <option key={manager.id} value={manager.id}>
                           {manager.name}
                         </option>
                       ))}

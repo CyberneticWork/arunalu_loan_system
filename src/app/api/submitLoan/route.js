@@ -16,8 +16,8 @@ export async function POST(req) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         client.id,
-        CROid,
-        CROid,
+        loanData.selectedManager, //CROid
+        CROid, //Addbyid
         null,
         client.location,
         client.gs,
