@@ -1,3 +1,5 @@
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 export function LoanSubmissionDisplay({
@@ -7,6 +9,82 @@ export function LoanSubmissionDisplay({
   onEditGuarantor,
   onRemoveGuarantor,
 }) {
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState("");
+  const router = useRouter();
+
+  const [loanTypeMode, setLoanTypeMode] = useState("normal");
+  const [groupName, setGroupName] = useState("");
+
+  const handleConfirmProcess = async () => {
+    setLoading(true);
+    setResult(null);
+    setNotification("");
+    try {
+      // 1. Get client details
+      const clientRes = await fetch(
+        `/api/customer/searchbyid?clid=${loanData.clientInfo.id}`
+      );
+      const clientJson = await clientRes.json();
+      const client = clientJson.customer || {};
+
+      // Get CROid from localStorage
+      let CROid = null;
+      if (typeof window !== "undefined") {
+        const token = window.localStorage.getItem("user");
+        if (token) {
+          try {
+            CROid = JSON.parse(token)["id"];
+          } catch {}
+        }
+      }
+
+      // Prepare data to send
+      const dataToSend = {
+        loanData: {
+          ...loanData,
+          loanTypeMode,
+          ...(loanTypeMode === "group" ? { groupName } : {}),
+        },
+        client: {
+          ...loanData.clientInfo,
+          location: client.location,
+          gs: client.gs,
+          ds: client.ds,
+          province: client.province,
+        },
+        CROid,
+        guarantors,
+      };
+
+      // Call the API to submit the loan and guarantors
+      const apiRes = await fetch("/api/submitLoan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataToSend),
+      });
+      const apiData = await apiRes.json();
+
+      if (apiData.code === "SUCCESS") {
+        setNotification("Loan submitted successfully!");
+        setTimeout(() => {
+          // router.push("/your-loan-details-page"); // Uncomment when developed
+          router.push("/loans"); // Redirect to loan types page for now
+        }, 2000);
+      } else {
+        setNotification("Failed to submit loan. Please try again.");
+      }
+
+      setResult(dataToSend);
+    } catch (e) {
+      console.error("Loan submission error:", e); // <-- Add this line
+      setResult({ error: e.message });
+      setNotification("An error occurred. Please try again. " + (e.message || ""));
+    }
+    setLoading(false);
+  };
+
   return (
     <>
       {/* Client Information Section */}
@@ -39,6 +117,39 @@ export function LoanSubmissionDisplay({
         <h2 className="text-lg font-semibold text-blue-800 mb-4 pb-2 border-b">
           Loan Details
         </h2>
+        <div className="mb-4 flex items-center gap-6">
+          <span className="font-medium">Loan Type:</span>
+          <label className="flex items-center gap-1">
+            <input
+              type="radio"
+              name="loanTypeMode"
+              value="normal"
+              checked={loanTypeMode === "normal"}
+              onChange={() => setLoanTypeMode("normal")}
+            />
+            Normal
+          </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="radio"
+              name="loanTypeMode"
+              value="group"
+              checked={loanTypeMode === "group"}
+              onChange={() => setLoanTypeMode("group")}
+            />
+            Group
+          </label>
+          {loanTypeMode === "group" && (
+            <input
+              type="text"
+              className="ml-4 border rounded px-2 py-1"
+              placeholder="Enter group name"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              style={{ minWidth: 180 }}
+            />
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="text-sm text-gray-500">Loan Type</label>
@@ -179,12 +290,32 @@ export function LoanSubmissionDisplay({
             </p>
           </div>
           <div className="flex gap-3">
-            <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
-              Confirm & Process
+            <button
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              onClick={handleConfirmProcess}
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "Confirm & Process"}
             </button>
           </div>
         </div>
+        {result && (
+          <div className="mt-4">
+            <div className="mb-2 font-semibold text-blue-700">
+              All details ready to send:
+            </div>
+            <pre className="bg-white p-3 rounded text-xs text-left overflow-x-auto">
+              {JSON.stringify(result, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
+
+      {notification && (
+        <div className="mb-4 p-3 rounded bg-green-100 text-green-800 font-semibold text-center">
+          {notification}
+        </div>
+      )}
     </>
   );
 }
