@@ -125,6 +125,7 @@ export default function Home() {
       loanFrequency,
       loanDuration: parseInt(loanDuration) || 0,
       selectedSubLoanCategory,
+      selectedManager,
 
       // Client Information
       clientInfo: {
@@ -419,6 +420,14 @@ export default function Home() {
     setAddingLoanType(false);
   };
 
+  // Helper function to allow only numbers
+  const handleNumberInput = (e, setter) => {
+    const value = e.target.value;
+    if (/^\d*\.?\d*$/.test(value)) {
+      setter(value);
+    }
+  };
+
   return (
     <>
       <div className="flex h-screen bg-gray-100 overflow-hidden">
@@ -478,7 +487,7 @@ export default function Home() {
                     >
                       <option disabled>Select Account Manager</option>
                       {managers.map((manager) => (
-                        <option key={manager.id} value={manager.name}>
+                        <option key={manager.id} value={manager.id}>
                           {manager.name}
                         </option>
                       ))}
@@ -619,8 +628,9 @@ export default function Home() {
                       </Label>
                       <Input
                         type="number"
+                        min={1} 
                         value={loanAmount}
-                        onChange={(e) => setLoanAmount(e.target.value)}
+                        onChange={(e) => handleNumberInput(e, setLoanAmount)}
                         placeholder="Enter amount"
                       />
                     </div>
@@ -630,8 +640,9 @@ export default function Home() {
                       <Label>Interest Rate (%)</Label>
                       <Input
                         type="number"
+                        min={0}
                         value={interestRate}
-                        onChange={(e) => setInterestRate(e.target.value)}
+                        onChange={(e) => handleNumberInput(e, setInterestRate)}
                         placeholder="Enter rate"
                       />
                     </div>
@@ -641,8 +652,9 @@ export default function Home() {
                       <Label>Service Charge</Label>
                       <Input
                         type="number"
+                        min={0} 
                         value={serviceCharge}
-                        onChange={(e) => setServiceCharge(e.target.value)}
+                        onChange={(e) => handleNumberInput(e, setServiceCharge)}
                         placeholder="Enter charge"
                       />
                     </div>
@@ -672,13 +684,13 @@ export default function Home() {
                     {/* Loan Duration */}
                     <div className="space-y-2">
                       <Label className="flex items-center">
-                        Loan Duration{" "}
-                        <span className="text-red-500 ml-1">*</span>
+                        Loan Duration <span className="text-red-500 ml-1">*</span>
                       </Label>
                       <Input
                         type="number"
+                        min={1} 
                         value={loanDuration}
-                        onChange={(e) => setLoanDuration(e.target.value)}
+                        onChange={(e) => handleNumberInput(e, setLoanDuration)}
                         placeholder="Enter duration"
                       />
                     </div>
