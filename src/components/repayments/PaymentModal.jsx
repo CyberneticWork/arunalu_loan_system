@@ -52,7 +52,7 @@ export default function PaymentModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalAmount =
-    payments?.reduce((sum, p) => sum + Number(p?.Totalpay || 0), 0) || 0;
+    payments?.reduce((sum, p) => sum + Number(p?.remainingAmount || 0), 0) || 0;
 
   const handleAmountChange = (id, value) => {
     if (isMultiple) {
@@ -72,20 +72,26 @@ export default function PaymentModal({
       const paymentsToSubmit = isMultiple
         ? paymentDetails.map((payment, index) => ({
             loanId: payments[index].id,
-            loanAmount: Number(payments[index].Totalpay),
-            fullLoanAmount: Number(payments[index].Totalpay),
-            paidAmount: Number(payment.amount),
+            loanAmount: parseFloat(payments[index].remainingAmount).toFixed(2),
+            fullLoanAmount: parseFloat(payments[index].Totalpay).toFixed(2),
+            paidAmount: parseFloat(payment.amount).toFixed(2),
             paymentMethod: payment.method,
-            setalment: Number(payments[index].Totalpay),
+            setalment: (
+              parseFloat(payments[index].remainingAmount) -
+              parseFloat(payment.amount)
+            ).toFixed(2),
           }))
         : [
             {
               loanId: payments[0].id,
-              loanAmount: Number(payments[0].Totalpay),
-              fullLoanAmount: Number(payments[0].Totalpay),
-              paidAmount: Number(paymentDetails.amount),
+              loanAmount: parseFloat(payments[0].remainingAmount).toFixed(2),
+              fullLoanAmount: parseFloat(payments[0].Totalpay).toFixed(2),
+              paidAmount: parseFloat(paymentDetails.amount).toFixed(2),
               paymentMethod: paymentDetails.method,
-              setalment: Number(payments[0].Totalpay),
+              setalment: (
+                parseFloat(payments[0].remainingAmount) -
+                parseFloat(paymentDetails.amount)
+              ).toFixed(2),
             },
           ];
 
@@ -200,6 +206,13 @@ export default function PaymentModal({
                         </Select>
                       </div>
                     </div>
+
+                    <div className="space-y-1 text-right">
+                      <Label>Remaining Amount</Label>
+                      <div className="text-sm text-gray-700 font-medium">
+                        LKR {Number(payment.remainingAmount).toLocaleString()}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -270,6 +283,13 @@ export default function PaymentModal({
                     <SelectItem value="bank">Bank Transfer</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Remaining Amount</Label>
+                <div className="text-sm text-gray-700 font-medium">
+                  LKR {Number(payments[0]?.remainingAmount).toLocaleString()}
+                </div>
               </div>
             </>
           )}

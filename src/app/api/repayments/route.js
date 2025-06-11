@@ -24,7 +24,13 @@ export async function GET() {
           WHEN lb.type = 'weekly' THEN CONCAT(lb.loanType, ' (Weekly)')
           WHEN lb.type = 'monthly' THEN CONCAT(lb.loanType, ' (Monthly)')
           ELSE lb.loanType
-        END as formattedLoanType
+        END as formattedLoanType,
+        COALESCE(
+          (SELECT lb.Totalpay - SUM(r.paid_amount)
+           FROM repayment r 
+           WHERE r.loan_bussiness_id = lb.id),
+          lb.Totalpay
+        ) as remainingAmount
       FROM loan_bussiness lb
       JOIN customer c ON lb.customerid = c.id
       WHERE lb.status = 'active'
@@ -36,6 +42,7 @@ export async function GET() {
       data: rows.map((row) => ({
         ...row,
         loanType: row.formattedLoanType,
+        remainingAmount: Number(row.remainingAmount || row.Totalpay)
       })),
     });
   } catch (error) {

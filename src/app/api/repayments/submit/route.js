@@ -12,12 +12,28 @@ export async function POST(request) {
     const results = [];
 
     for (const payment of payments) {
-      // Get current payment count for this loan
+      // Get current payment count and total paid amount for this loan
       const [countResult] = await connection.execute(
-        "SELECT COUNT(*) as count FROM repayment WHERE loan_bussiness_id = ?",
+        `SELECT 
+          COUNT(*) as count,
+          COALESCE(SUM(paid_amount), 0) as totalPaid 
+        FROM repayment 
+        WHERE loan_bussiness_id = ?`,
         [payment.loanId]
       );
+
       const paymentCount = countResult[0].count + 1;
+      const previousPaidAmount = parseFloat(countResult[0].totalPaid || 0);
+      const newPaidAmount = parseFloat(payment.paidAmount);
+      const totalPaidAmount = (previousPaidAmount + newPaidAmount).toFixed(2);
+
+      // Calculate remaining amount
+      const remainingAmount = (
+        parseFloat(payment.fullLoanAmount) - 
+        parseFloat(totalPaidAmount)
+      ).toFixed(2);
+      
+      const status = parseFloat(remainingAmount) <= 0 ? "completed" : "pending";
 
       // Insert the payment record
       const [result] = await connection.execute(
@@ -36,12 +52,22 @@ export async function POST(request) {
           paymentCount,
           payment.loanAmount,
           payment.fullLoanAmount,
-          payment.paidAmount,
+          newPaidAmount.toFixed(2),
           payment.paymentMethod,
-          payment.setalment,
-          "completed",
+          remainingAmount,
+          status
         ]
       );
+
+      // If payment completed, update loan_bussiness status
+      if (status === "completed") {
+        await connection.execute(
+          `UPDATE loan_bussiness 
+           SET status = 'completed' 
+           WHERE id = ?`,
+          [payment.loanId]
+        );
+      }
 
       // Get the generated transaction ID
       const [transactionResult] = await connection.execute(
@@ -53,6 +79,8 @@ export async function POST(request) {
         success: true,
         transactionId: transactionResult[0].transactionId,
         paymentId: result.insertId,
+        remainingAmount,
+        status,
       });
     }
 
