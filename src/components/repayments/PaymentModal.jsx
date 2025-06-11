@@ -87,79 +87,90 @@ export default function PaymentModal({
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           {isMultiple ? (
-            // Multiple payments form
             <>
-              {payments.map((payment, index) => (
-                <div
-                  key={payment.id}
-                  className="border p-4 rounded-lg space-y-4"
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="space-y-1">
-                      <Label>Customer Name</Label>
-                      <div className="text-sm text-gray-700 font-medium">
-                        {payment.customerName}
+              <div className="max-h-[400px] overflow-y-auto pr-2 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                {payments.map((payment, index) => (
+                  <div
+                    key={payment.id}
+                    className="border p-4 rounded-lg space-y-4 bg-white"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="space-y-1">
+                        <Label>Customer Name</Label>
+                        <div className="text-sm text-gray-700 font-medium">
+                          {payment.customerName}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Contract: {payment.telno}
+                        </div>
+                      </div>
+                      <div className="space-y-1 text-right">
+                        <Label>Total Amount</Label>
+                        <div className="text-sm text-gray-700 font-medium">
+                          LKR {Number(payment.Totalpay).toLocaleString()}
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-1 text-right">
-                      <Label>Total Amount</Label>
-                      <div className="text-sm text-gray-700 font-medium">
-                        LKR {Number(payment.Totalpay).toLocaleString()}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor={`amount-${payment.id}`}>
+                          Payment Amount
+                        </Label>
+                        <Input
+                          id={`amount-${payment.id}`}
+                          type="number"
+                          placeholder="Enter amount"
+                          value={paymentDetails[index]?.amount || ""}
+                          onChange={(e) =>
+                            handleAmountChange(payment.id, e.target.value)
+                          }
+                          required
+                        />
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor={`amount-${payment.id}`}>
-                        Payment Amount
-                      </Label>
-                      <Input
-                        id={`amount-${payment.id}`}
-                        type="number"
-                        placeholder="Enter amount"
-                        value={paymentDetails[index]?.amount || ""}
-                        onChange={(e) =>
-                          handleAmountChange(payment.id, e.target.value)
-                        }
-                        required
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor={`method-${payment.id}`}>
-                        Payment Method
-                      </Label>
-                      <Select
-                        value={paymentDetails[index]?.method || "cash"}
-                        onValueChange={(value) =>
-                          setPaymentDetails((prev) =>
-                            prev.map((p) =>
-                              p.id === payment.id ? { ...p, method: value } : p
+                      <div className="grid gap-2">
+                        <Label htmlFor={`method-${payment.id}`}>
+                          Payment Method
+                        </Label>
+                        <Select
+                          value={paymentDetails[index]?.method || "cash"}
+                          onValueChange={(value) =>
+                            setPaymentDetails((prev) =>
+                              prev.map((p) =>
+                                p.id === payment.id
+                                  ? { ...p, method: value }
+                                  : p
+                              )
                             )
-                          )
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select payment method" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="bank">Bank Transfer</SelectItem>
-                        </SelectContent>
-                      </Select>
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="bank">Bank Transfer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
 
               <div className="border-t pt-4 mt-4">
-                <div className="text-right">
+                <div className="flex justify-between items-center">
                   <div className="text-sm text-gray-600">
-                    Total Amount to Pay
+                    Showing {payments.length} payments
                   </div>
-                  <div className="text-lg font-semibold">
-                    LKR {totalAmount.toLocaleString()}
+                  <div className="text-right">
+                    <div className="text-sm text-gray-600">
+                      Total Amount to Pay
+                    </div>
+                    <div className="text-lg font-semibold">
+                      LKR {totalAmount.toLocaleString()}
+                    </div>
                   </div>
                 </div>
               </div>
