@@ -337,6 +337,7 @@ export default function FinanceDashboard() {
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>Customer</TableHead>
+                  <TableHead>Loan Type</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Location</TableHead>
@@ -353,6 +354,7 @@ export default function FinanceDashboard() {
                     <TableCell className="font-medium">{loan.id}</TableCell>
                     <TableCell>{loan.customerName}</TableCell>
                     <TableCell>{loan.loanType}</TableCell>
+                    <TableCell>{loan.type}</TableCell>
                     <TableCell>{loan.revenueAmount}</TableCell>
                     <TableCell>{loan.location}</TableCell>
                     <TableCell>{loan.gs}</TableCell>
