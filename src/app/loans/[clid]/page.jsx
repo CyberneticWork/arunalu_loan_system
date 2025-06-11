@@ -76,7 +76,7 @@ export default function Home() {
     id: "0",
     NIC: "0",
   });
-  
+
   const [loadingClient, setLoadingClient] = useState(false);
   const [clientError, setClientError] = useState("");
   const [croOfficers, setCroOfficers] = useState([]);
@@ -107,7 +107,9 @@ export default function Home() {
   const [addSubLoanError, setAddSubLoanError] = useState("");
 
   const [managers, setManagers] = useState([]);
-  const [selectedManager, setSelectedManager] = useState("Select Account Manager");
+  const [selectedManager, setSelectedManager] = useState(
+    "Select Account Manager"
+  );
 
   // Handle form submission for loan application
   const handleSubmitLoan = () => {
@@ -292,7 +294,6 @@ export default function Home() {
       setClientData(customer);
     } else {
       setClientError("Client not found");
-      
     }
     setLoadingClient(false);
   };
@@ -377,7 +378,7 @@ export default function Home() {
     const interest = parseFloat(interestRate) || 0;
     const charge = parseFloat(serviceCharge) || 0;
     const duration = parseInt(loanDuration) || 0;
-    const frequency = loanFrequency; 
+    const frequency = loanFrequency;
 
     const result = calculateLoan({
       principal: amount,
@@ -385,7 +386,6 @@ export default function Home() {
       term: duration,
       paymentFrequency: frequency,
       serviceCharge: charge,
-   
     });
 
     setTotalAmount(result.totalPayable || 0);
@@ -468,7 +468,9 @@ export default function Home() {
                   </div>
 
                   <div className="mt-4 md:mt-0 md:ml-6 flex flex-col justify-center">
-                    <Label className="text-sm mb-1">Select Account Manager</Label>
+                    <Label className="text-sm mb-1">
+                      Select Account Manager
+                    </Label>
                     <select
                       className="border rounded-md px-3 py-2 w-full mt-1"
                       value={selectedManager}
@@ -790,7 +792,9 @@ export default function Home() {
                         onClick={handleSubmitLoan}
                         className="bg-green-600 hover:bg-green-700 w-full py-6"
                         disabled={
-                          !clientInfo.name || clientInfo.name === "none"
+                          !clientInfo.name ||
+                          clientInfo.name === "none" ||
+                          totalAmount === 0
                         }
                       >
                         <Plus className="w-5 h-5 mr-2" />
@@ -873,7 +877,6 @@ export function EquipmentLoan() {
                 </div>
 
                 <div className="mt-4 md:mt-0 md:ml-6 flex flex-col justify-center">
-                
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button

@@ -339,6 +339,9 @@ export default function FinanceDashboard() {
                   <TableHead>Customer</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Amount</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>GS</TableHead>
+                  <TableHead>DS</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead></TableHead>
@@ -351,6 +354,9 @@ export default function FinanceDashboard() {
                     <TableCell>{loan.customerName}</TableCell>
                     <TableCell>{loan.loanType}</TableCell>
                     <TableCell>{loan.revenueAmount}</TableCell>
+                    <TableCell>{loan.location}</TableCell>
+                    <TableCell>{loan.gs}</TableCell>
+                    <TableCell>{loan.ds}</TableCell>
                     <TableCell>{loan.applicationDate}</TableCell>
                     <TableCell>
                       <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">

@@ -36,6 +36,9 @@ export async function GET() {
           b.loanAmount as revenueAmount,
           b.status,
           b.loanType,
+          b.location,
+          b.gs,
+          b.ds,
           DATE_FORMAT(b.addat, '%b %d, %Y') as applicationDate
         FROM loan_bussiness b
         JOIN customer c ON b.customerid = c.id
@@ -43,7 +46,6 @@ export async function GET() {
         WHERE b.status = 'fund waiting' OR 
               b.status = 'active' OR
               b.status = 'pending'
-
         ORDER BY b.addat DESC
       `);
 
@@ -88,6 +90,9 @@ export async function GET() {
         revenueAmount: `LKR ${Number(loan.revenueAmount).toLocaleString()}`,
         status: loan.status === 'active' ? "Approved" : "Waiting for Funds",
         loanType: loan.loanType ,
+        location: loan.location,
+        gs: loan.gs,
+        ds: loan.ds,
         applicationDate: loan.applicationDate
       }));
 

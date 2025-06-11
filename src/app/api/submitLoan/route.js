@@ -29,7 +29,7 @@ export async function POST(req) {
         loanData.loanName,
         loanData.selectedSubLoanCategory,
         loanData.serviceCharge,
-        loanData.type || null,
+        loanData.loanFrequency || null,
         loanData.loanAmount,
         loanData.interestRate,
         loanData.loanDuration,
