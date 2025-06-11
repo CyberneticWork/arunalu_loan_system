@@ -52,6 +52,11 @@ export default function FinanceDashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [statusFilter, setStatusFilter] = useState("");
+  const [loanTypeSearch, setLoanTypeSearch] = useState("");
+  const [typeSearch, setTypeSearch] = useState("");
+  const [locationSearch, setLocationSearch] = useState("");
+  const [gsSearch, setGsSearch] = useState("");
+  const [dsSearch, setDsSearch] = useState("");
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -114,7 +119,7 @@ export default function FinanceDashboard() {
   if (loan.status === "Approved") {
     handleViewDetails(loan); // Show modal for approved loans
   } else {
-    router.push(`/finance/finance-approvals?id=${loan.id}`); // Redirect for others
+    router.push(`/finance/finance-approvals?id=${loan.id}`); 
   }
 };
 
@@ -142,8 +147,14 @@ export default function FinanceDashboard() {
     );
   }
 
+
   const filteredData = recentLoans.filter(item =>
-    statusFilter === "" ? true : item.status === statusFilter
+    (statusFilter === "" ? true : item.status === statusFilter) &&
+    (loanTypeSearch === "" ? true : item.loanType?.toLowerCase().includes(loanTypeSearch.toLowerCase())) &&
+    (typeSearch === "" ? true : item.type?.toLowerCase().includes(typeSearch.toLowerCase())) &&
+    (locationSearch === "" ? true : item.location?.toLowerCase().includes(locationSearch.toLowerCase())) &&
+    (gsSearch === "" ? true : item.gs?.toLowerCase().includes(gsSearch.toLowerCase())) &&
+    (dsSearch === "" ? true : item.ds?.toLowerCase().includes(dsSearch.toLowerCase()))
   );
 
   return (
@@ -318,7 +329,7 @@ export default function FinanceDashboard() {
         <CardHeader>
           <CardTitle className="text-lg">Recent Loan Requests</CardTitle>
           <CardDescription>Latest loan requests that need your attention</CardDescription>
-          <div className="flex justify-end mb-4">
+          <div className="flex flex-wrap gap-2 mb-4">
             <select
               className="border rounded px-3 py-2"
               value={statusFilter}
@@ -328,6 +339,41 @@ export default function FinanceDashboard() {
               <option value="Approved">Approved</option>
               <option value="Waiting for Funds">Waiting for Funds</option>
             </select>
+            <input
+              type="text"
+              className="border rounded px-3 py-2"
+              placeholder="Search Loan Type"
+              value={loanTypeSearch}
+              onChange={e => setLoanTypeSearch(e.target.value)}
+            />
+            <input
+              type="text"
+              className="border rounded px-3 py-2"
+              placeholder="Search Type"
+              value={typeSearch}
+              onChange={e => setTypeSearch(e.target.value)}
+            />
+            <input
+              type="text"
+              className="border rounded px-3 py-2"
+              placeholder="Search Location"
+              value={locationSearch}
+              onChange={e => setLocationSearch(e.target.value)}
+            />
+            <input
+              type="text"
+              className="border rounded px-3 py-2"
+              placeholder="Search GS"
+              value={gsSearch}
+              onChange={e => setGsSearch(e.target.value)}
+            />
+            <input
+              type="text"
+              className="border rounded px-3 py-2"
+              placeholder="Search DS"
+              value={dsSearch}
+              onChange={e => setDsSearch(e.target.value)}
+            />
           </div>
         </CardHeader>
         <CardContent>
