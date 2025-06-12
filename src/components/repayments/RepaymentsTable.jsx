@@ -262,12 +262,12 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                           variant="ghost"
                           size="sm"
                           className={`h-8 px-2 ${
-                            isPaymentDisabled
+                            selectedRecords.length > 2
                               ? "text-gray-400 cursor-not-allowed"
                               : "text-blue-600"
                           }`}
                           onClick={() => handleViewPayment(payment)}
-                          disabled={isPaymentDisabled}
+                          disabled={selectedRecords.length > 1}
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           <span className="hidden sm:inline">Make Payment</span>
