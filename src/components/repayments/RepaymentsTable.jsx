@@ -221,13 +221,15 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium
-                    ${
-                      payment.loanTypeMode === "group"
-                        ? "bg-purple-100 text-purple-800"
-                        : "bg-blue-100 text-blue-800"
-                    }`}
+      ${
+        payment.loanTypeMode === "group"
+          ? "bg-purple-100 text-purple-800"
+          : "bg-blue-100 text-blue-800"
+      }`}
                         >
-                          {payment.loanTypeMode}
+                          {payment.loanTypeMode === "group"
+                            ? `Group (${payment.group_name || "N/A"})`
+                            : payment.loanTypeMode}
                         </span>
                       </TableCell>
                       <TableCell>
