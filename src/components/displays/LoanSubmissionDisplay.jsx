@@ -1,5 +1,5 @@
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 export function LoanSubmissionDisplay({
@@ -9,18 +9,68 @@ export function LoanSubmissionDisplay({
   onEditGuarantor,
   onRemoveGuarantor,
 }) {
-  const [result, setResult] = useState(null);
+  // const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState("");
   const router = useRouter();
 
   const [loanTypeMode, setLoanTypeMode] = useState("normal");
   const [groupName, setGroupName] = useState("");
+  const [managerName, setManagerName] = useState(""); // <-- Added state for manager name
+  const [categoryName, setCategoryName] = useState("");
+
+  const fetchManagerName = async () => {
+    try {
+      if (
+        loanData.selectedManager &&
+        loanData.selectedManager !== "Select CRO Officer"
+      ) {
+        const response = await fetch(
+          `/api/employee/getById?id=${loanData.selectedManager}`
+        );
+        const data = await response.json();
+        if (data.employee) {
+          setManagerName(data.employee.name);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching manager details:", error);
+    }
+  };
+
+  const fetchCategoryName = async () => {
+    try {
+      if (loanData.selectedSubLoanCategory) {
+        const response = await fetch(
+          `/api/sub_loan?id=${loanData.selectedSubLoanCategory}`
+        );
+        const data = await response.json();
+        if (data.code === "SUCCESS") {
+          setCategoryName(data.category.sub_loan_name);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching category details:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchManagerName();
+    fetchCategoryName();
+  }, [loanData.selectedManager, loanData.selectedSubLoanCategory]);
 
   const handleConfirmProcess = async () => {
     setLoading(true);
-    setResult(null);
+    // setResult(null);
     setNotification("");
+
+    // Add group name validation
+    if (loanTypeMode === "group" && !groupName.trim()) {
+      setNotification("Please enter a group name for group loans");
+      setLoading(false);
+      return;
+    }
+
     try {
       // 1. Get client details
       const clientRes = await fetch(
@@ -76,10 +126,10 @@ export function LoanSubmissionDisplay({
         setNotification("Failed to submit loan. Please try again.");
       }
 
-      setResult(dataToSend);
+      // setResult(dataToSend);
     } catch (e) {
       console.error("Loan submission error:", e); // <-- Add this line
-      setResult({ error: e.message });
+      // setResult({ error: e.message });
       setNotification(
         "An error occurred. Please try again. " + (e.message || "")
       );
@@ -107,9 +157,18 @@ export function LoanSubmissionDisplay({
             <label className="text-sm text-gray-500">NIC</label>
             <p className="font-medium">{loanData.clientInfo?.NIC}</p>
           </div>
-          <div>
+          {/* <div>
             <label className="text-sm text-gray-500">Account Manager</label>
             <p className="font-medium">{loanData.selectedOfficer}</p>
+          </div> */}
+          <div>
+            <label className="text-sm text-gray-500">Account Manager</label>
+            <p className="font-medium">
+              {managerName ||
+                (loanData.selectedManager === "Select CRO Officer"
+                  ? "Not Selected"
+                  : "Loading...")}
+            </p>
           </div>
         </div>
       </div>
@@ -142,14 +201,25 @@ export function LoanSubmissionDisplay({
             Group
           </label>
           {loanTypeMode === "group" && (
-            <input
-              type="text"
-              className="ml-4 border rounded px-2 py-1"
-              placeholder="Enter group name"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              style={{ minWidth: 180 }}
-            />
+            <div className="flex flex-col ml-4">
+              <input
+                type="text"
+                className={`border rounded px-2 py-1 ${
+                  loanTypeMode === "group" && !groupName.trim()
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-gray-300"
+                }`}
+                placeholder="Enter group name"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                style={{ minWidth: 180 }}
+              />
+              {loanTypeMode === "group" && !groupName.trim() && (
+                <span className="text-xs text-red-500 mt-1">
+                  Group name is required
+                </span>
+              )}
+            </div>
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -163,7 +233,7 @@ export function LoanSubmissionDisplay({
           </div>
           <div>
             <label className="text-sm text-gray-500">Loan Category</label>
-            <p className="font-medium">{loanData.selectedSubLoanCategory}</p>
+            <p className="font-medium">{categoryName || "Not Selected"}</p>
           </div>
           <div>
             <label className="text-sm text-gray-500">Loan Duration</label>
@@ -310,16 +380,6 @@ export function LoanSubmissionDisplay({
             )}
           </div>
         </div>
-        {result && (
-          <div className="mt-4">
-            <div className="mb-2 font-semibold text-blue-700">
-              All details ready to send:
-            </div>
-            <pre className="bg-white p-3 rounded text-xs text-left overflow-x-auto">
-              {JSON.stringify(result, null, 2)}
-            </pre>
-          </div>
-        )}
       </div>
 
       {notification && (
