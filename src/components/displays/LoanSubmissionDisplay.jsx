@@ -9,7 +9,7 @@ export function LoanSubmissionDisplay({
   onEditGuarantor,
   onRemoveGuarantor,
 }) {
-  const [result, setResult] = useState(null);
+  // const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState("");
   const router = useRouter();
@@ -61,8 +61,16 @@ export function LoanSubmissionDisplay({
 
   const handleConfirmProcess = async () => {
     setLoading(true);
-    setResult(null);
+    // setResult(null);
     setNotification("");
+
+    // Add group name validation
+    if (loanTypeMode === "group" && !groupName.trim()) {
+      setNotification("Please enter a group name for group loans");
+      setLoading(false);
+      return;
+    }
+
     try {
       // 1. Get client details
       const clientRes = await fetch(
@@ -118,10 +126,10 @@ export function LoanSubmissionDisplay({
         setNotification("Failed to submit loan. Please try again.");
       }
 
-      setResult(dataToSend);
+      // setResult(dataToSend);
     } catch (e) {
       console.error("Loan submission error:", e); // <-- Add this line
-      setResult({ error: e.message });
+      // setResult({ error: e.message });
       setNotification(
         "An error occurred. Please try again. " + (e.message || "")
       );
@@ -193,14 +201,25 @@ export function LoanSubmissionDisplay({
             Group
           </label>
           {loanTypeMode === "group" && (
-            <input
-              type="text"
-              className="ml-4 border rounded px-2 py-1"
-              placeholder="Enter group name"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              style={{ minWidth: 180 }}
-            />
+            <div className="flex flex-col ml-4">
+              <input
+                type="text"
+                className={`border rounded px-2 py-1 ${
+                  loanTypeMode === "group" && !groupName.trim()
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-gray-300"
+                }`}
+                placeholder="Enter group name"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                style={{ minWidth: 180 }}
+              />
+              {loanTypeMode === "group" && !groupName.trim() && (
+                <span className="text-xs text-red-500 mt-1">
+                  Group name is required
+                </span>
+              )}
+            </div>
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -361,16 +380,6 @@ export function LoanSubmissionDisplay({
             )}
           </div>
         </div>
-        {result && (
-          <div className="mt-4">
-            <div className="mb-2 font-semibold text-blue-700">
-              All details ready to send:
-            </div>
-            <pre className="bg-white p-3 rounded text-xs text-left overflow-x-auto">
-              {JSON.stringify(result, null, 2)}
-            </pre>
-          </div>
-        )}
       </div>
 
       {notification && (
