@@ -5,7 +5,6 @@
     "route": "/",
     "icon": "Home"
   },
- 
   {
     "id": 8,
     "name": "Clients",
@@ -55,6 +54,12 @@
         "name": "Equipment Loan",
         "route": "/loans/equipment-loan/bG9naW49MixjaG9vc2U9MixjdXN0b21lcj0w",
         "icon": "BriefcaseBusiness"
+      },
+      {
+        "id": 23,
+        "name": "Repayments",
+        "icon": "Wallet",
+        "route": "/loans/repayments"
       }
     ]
   },
