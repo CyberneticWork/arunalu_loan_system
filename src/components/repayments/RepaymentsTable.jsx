@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Search, Filter, Eye } from "lucide-react";
 import PaymentModal from "./PaymentModal";
+import { useRouter } from "next/navigation";
 
 export default function RepaymentsTable({ data = [], onRefresh }) {
   const [selectedRecords, setSelectedRecords] = useState([]);
@@ -36,6 +37,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const router = useRouter();
 
   // Filter functions
   const filterData = (data) => {
@@ -149,19 +151,28 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
             </div>
 
             {/* Right side with Multiple Payments button */}
-            <Button
-              variant="default"
-              size="sm"
-              className={`${
-                selectedRecords.length === 0
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700"
-              }`}
-              disabled={selectedRecords.length === 0}
-              onClick={() => handleMultiplePayments(selectedRecords)}
-            >
-              Multiple Payments ({selectedRecords.length})
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                className={`${
+                  selectedRecords.length === 0
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+                disabled={selectedRecords.length === 0}
+                onClick={() => handleMultiplePayments(selectedRecords)}
+              >
+                Multiple Payments ({selectedRecords.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/repayments/history")}
+              >
+                Completed History
+              </Button>
+            </div>
           </div>
 
           {/* Table */}
@@ -221,13 +232,15 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium
-                    ${
-                      payment.loanTypeMode === "group"
-                        ? "bg-purple-100 text-purple-800"
-                        : "bg-blue-100 text-blue-800"
-                    }`}
+      ${
+        payment.loanTypeMode === "group"
+          ? "bg-purple-100 text-purple-800"
+          : "bg-blue-100 text-blue-800"
+      }`}
                         >
-                          {payment.loanTypeMode}
+                          {payment.loanTypeMode === "group"
+                            ? `Group (${payment.group_name || "N/A"})`
+                            : payment.loanTypeMode}
                         </span>
                       </TableCell>
                       <TableCell>

@@ -26,15 +26,10 @@ export async function GET() {
           WHEN lb.type = 'monthly' THEN CONCAT(lb.loanType, ' (Monthly)')
           ELSE lb.loanType
         END as formattedLoanType,
-        COALESCE(
-          (SELECT lb.Totalpay - SUM(r.paid_amount)
-           FROM repayment r 
-           WHERE r.loan_bussiness_id = lb.id),
-          lb.Totalpay
-        ) as remainingAmount
+        0 as remainingAmount
       FROM loan_bussiness lb
       JOIN customer c ON lb.customerid = c.id
-      WHERE lb.status = 'active'
+      WHERE lb.status = 'completed'
       ORDER BY lb.addat DESC
     `);
 
@@ -43,15 +38,15 @@ export async function GET() {
       data: rows.map((row) => ({
         ...row,
         loanType: row.formattedLoanType,
-        remainingAmount: Number(row.remainingAmount || row.Totalpay)
+        remainingAmount: 0
       })),
     });
   } catch (error) {
-    console.error("Error fetching repayments:", error);
+    console.error("Error fetching completed repayments:", error);
     return Response.json(
       {
         code: "ERROR",
-        message: "Failed to fetch repayments",
+        message: "Failed to fetch completed repayments",
       },
       { status: 500 }
     );
