@@ -30,6 +30,11 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
     search: "",
     status: "all",
     dateRange: "all",
+    telno: "",
+    location: "",
+    gs: "",
+    ds: "",
+    loanType: "",
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -44,17 +49,38 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
     return data.filter((payment) => {
       const matchesSearch =
         !filters.search ||
-        payment.contractid
-          ?.toLowerCase()
-          .includes(filters.search.toLowerCase()) ||
-        payment.customerName
-          ?.toLowerCase()
-          .includes(filters.search.toLowerCase());
+        payment.customerName?.toLowerCase().includes(filters.search.toLowerCase());
 
       const matchesStatus =
         filters.status === "all" || payment.status === filters.status;
 
-      return matchesSearch && matchesStatus;
+      const matchesTelno =
+        !filters.telno ||
+        payment.telno?.toLowerCase().includes(filters.telno.toLowerCase());
+
+      const matchesLocation =
+        !filters.location ||
+        payment.location?.toLowerCase().includes(filters.location.toLowerCase());
+
+      const matchesGS =
+        !filters.gs || payment.gs?.toLowerCase().includes(filters.gs.toLowerCase());
+
+      const matchesDS =
+        !filters.ds || payment.ds?.toLowerCase().includes(filters.ds.toLowerCase());
+
+      const matchesLoanType =
+        !filters.loanType ||
+        payment.loanType?.toLowerCase().includes(filters.loanType.toLowerCase());
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesTelno &&
+        matchesLocation &&
+        matchesGS &&
+        matchesDS &&
+        matchesLoanType
+      );
     });
   };
 
@@ -97,68 +123,48 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
         </CardHeader>
 
         <CardContent>
-          {/* Filters */}
-          <div className="mb-4 flex flex-col sm:flex-row gap-3 items-end justify-between">
-            {/* Left side with search and filters */}
-            <div className="flex flex-col sm:flex-row gap-3 flex-1">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                <Input
-                  placeholder="Search by contract number or customer..."
-                  className="pl-9"
-                  value={filters.search}
-                  onChange={(e) =>
-                    setFilters({ ...filters, search: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-2 sm:flex gap-3">
-                <Select
-                  value={filters.status}
-                  onValueChange={(value) =>
-                    setFilters({ ...filters, status: value })
-                  }
-                >
-                  <SelectTrigger className="w-36">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="overdue">Overdue</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={filters.dateRange}
-                  onValueChange={(value) =>
-                    setFilters({ ...filters, dateRange: value })
-                  }
-                >
-                  <SelectTrigger className="w-36">
-                    <SelectValue placeholder="Date Range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Time</SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="week">This Week</SelectItem>
-                    <SelectItem value="month">This Month</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* Search Bars and Buttons in One Row */}
+          <div className="mb-6 flex flex-col sm:flex-row items-center gap-3">
+            <div className="flex flex-1 gap-2">
+              <Input
+                placeholder="Contact Number"
+                value={filters.telno}
+                onChange={(e) => setFilters({ ...filters, telno: e.target.value })}
+                className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
+              />
+              <Input
+                placeholder="Location"
+                value={filters.location}
+                onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+                className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
+              />
+              <Input
+                placeholder="GS Division"
+                value={filters.gs}
+                onChange={(e) => setFilters({ ...filters, gs: e.target.value })}
+                className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
+              />
+              <Input
+                placeholder="DS Office"
+                value={filters.ds}
+                onChange={(e) => setFilters({ ...filters, ds: e.target.value })}
+                className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
+              />
+              <Input
+                placeholder="Loan Type"
+                value={filters.loanType}
+                onChange={(e) => setFilters({ ...filters, loanType: e.target.value })}
+                className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
+              />
             </div>
-
-            {/* Right side with Multiple Payments button */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-2 sm:mt-0">
               <Button
                 variant="default"
                 size="sm"
-                className={`${
+                className={`rounded-lg px-4 py-2 font-semibold transition-all duration-150 shadow ${
                   selectedRecords.length === 0
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
+                    ? "bg-gray-300 cursor-not-allowed text-gray-600"
+                    : "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
                 }`}
                 disabled={selectedRecords.length === 0}
                 onClick={() => handleMultiplePayments(selectedRecords)}
@@ -168,6 +174,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
               <Button
                 variant="outline"
                 size="sm"
+                className="rounded-lg border-blue-400 text-blue-700 hover:bg-blue-50 transition-all duration-150"
                 onClick={() => router.push("/repayments/history")}
               >
                 Completed History
