@@ -1,5 +1,5 @@
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 export function LoanSubmissionDisplay({
@@ -16,6 +16,48 @@ export function LoanSubmissionDisplay({
 
   const [loanTypeMode, setLoanTypeMode] = useState("normal");
   const [groupName, setGroupName] = useState("");
+  const [managerName, setManagerName] = useState(""); // <-- Added state for manager name
+  const [categoryName, setCategoryName] = useState("");
+
+  const fetchManagerName = async () => {
+    try {
+      if (
+        loanData.selectedManager &&
+        loanData.selectedManager !== "Select CRO Officer"
+      ) {
+        const response = await fetch(
+          `/api/employee/getById?id=${loanData.selectedManager}`
+        );
+        const data = await response.json();
+        if (data.employee) {
+          setManagerName(data.employee.name);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching manager details:", error);
+    }
+  };
+
+  const fetchCategoryName = async () => {
+    try {
+      if (loanData.selectedSubLoanCategory) {
+        const response = await fetch(
+          `/api/sub_loan?id=${loanData.selectedSubLoanCategory}`
+        );
+        const data = await response.json();
+        if (data.code === "SUCCESS") {
+          setCategoryName(data.category.sub_loan_name);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching category details:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchManagerName();
+    fetchCategoryName();
+  }, [loanData.selectedManager, loanData.selectedSubLoanCategory]);
 
   const handleConfirmProcess = async () => {
     setLoading(true);
@@ -107,9 +149,18 @@ export function LoanSubmissionDisplay({
             <label className="text-sm text-gray-500">NIC</label>
             <p className="font-medium">{loanData.clientInfo?.NIC}</p>
           </div>
-          <div>
+          {/* <div>
             <label className="text-sm text-gray-500">Account Manager</label>
             <p className="font-medium">{loanData.selectedOfficer}</p>
+          </div> */}
+          <div>
+            <label className="text-sm text-gray-500">Account Manager</label>
+            <p className="font-medium">
+              {managerName ||
+                (loanData.selectedManager === "Select CRO Officer"
+                  ? "Not Selected"
+                  : "Loading...")}
+            </p>
           </div>
         </div>
       </div>
@@ -163,7 +214,7 @@ export function LoanSubmissionDisplay({
           </div>
           <div>
             <label className="text-sm text-gray-500">Loan Category</label>
-            <p className="font-medium">{loanData.selectedSubLoanCategory}</p>
+            <p className="font-medium">{categoryName || "Not Selected"}</p>
           </div>
           <div>
             <label className="text-sm text-gray-500">Loan Duration</label>
