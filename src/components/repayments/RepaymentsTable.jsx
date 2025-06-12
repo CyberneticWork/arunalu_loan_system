@@ -262,7 +262,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                           variant="ghost"
                           size="sm"
                           className={`h-8 px-2 ${
-                            selectedRecords.length > 2
+                            selectedRecords.length > 1
                               ? "text-gray-400 cursor-not-allowed"
                               : "text-blue-600"
                           }`}
