@@ -15,6 +15,7 @@ export async function GET() {
         lb.type,
         lb.Totalpay,
         lb.status,
+        lb.group_name, 
         c.fullname as customerName,
         c.gs,
         c.ds,
