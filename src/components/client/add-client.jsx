@@ -547,7 +547,7 @@ export function AddClient({ onSubmit, onCancel, initialNIC }) {
               </Label>
               <Select
                 value={formData.location}
-                onValueChange={(value) => handleChange('location', value)}
+                onValueChange={(value) => handleChange("location", value)}
                 disabled={clientExists && customerStatus !== "draft"}
               >
                 <SelectTrigger id="location">
@@ -890,9 +890,8 @@ export function AddClient({ onSubmit, onCancel, initialNIC }) {
                 <p className="text-sm">
                   <span className="font-medium">Date of Birth:</span>{" "}
                   {formData.dob}
-                </p>               
+                </p>
               </div>
-              
 
               <div className="space-y-1">
                 <p className="text-sm">
