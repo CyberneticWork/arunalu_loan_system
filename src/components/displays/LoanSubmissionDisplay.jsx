@@ -61,12 +61,23 @@ export function LoanSubmissionDisplay({
 
   const handleConfirmProcess = async () => {
     setLoading(true);
-    // setResult(null);
     setNotification("");
 
     // Add group name validation
     if (loanTypeMode === "group" && !groupName.trim()) {
       setNotification("Please enter a group name for group loans");
+      setLoading(false);
+      return;
+    }
+    if (
+      !loanData.selectedManager ||
+      isNaN(Number(loanData.selectedManager)) ||
+      loanData.selectedManager === "Select CRO Officer" ||
+      loanData.selectedManager === "Select Account Manager"
+    ) {
+      setNotification(
+        "Please select a valid Account Manager before submitting."
+      );
       setLoading(false);
       return;
     }
@@ -108,6 +119,9 @@ export function LoanSubmissionDisplay({
         guarantors,
       };
 
+      // Log the data to the console in JSON format
+      console.log("Submitting loan data:", JSON.stringify(dataToSend, null, 2));
+
       // Call the API to submit the loan and guarantors
       const apiRes = await fetch("/api/submitLoan", {
         method: "POST",
@@ -118,10 +132,10 @@ export function LoanSubmissionDisplay({
 
       if (apiData.code === "SUCCESS") {
         setNotification("Loan submitted successfully!");
-        setTimeout(() => {
-          // router.push("/your-loan-details-page"); // add redirect path
-          router.push("/loans/0"); // Redirect to loan types page for now
-        }, 2000);
+        // setTimeout(() => {
+        //   // router.push("/your-loan-details-page"); // add redirect path
+        //   router.push("/loans/0"); // Redirect to loan types page for now
+        // }, 2000);
       } else {
         setNotification("Failed to submit loan. Please try again.");
       }
