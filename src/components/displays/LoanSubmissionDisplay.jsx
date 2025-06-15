@@ -120,7 +120,7 @@ export function LoanSubmissionDisplay({
       };
 
       // Log the data to the console in JSON format
-      console.log("Submitting loan data:", JSON.stringify(dataToSend, null, 2));
+      // console.log("Submitting loan data:", JSON.stringify(dataToSend, null, 2));
 
       // Call the API to submit the loan and guarantors
       const apiRes = await fetch("/api/submitLoan", {
@@ -132,10 +132,10 @@ export function LoanSubmissionDisplay({
 
       if (apiData.code === "SUCCESS") {
         setNotification("Loan submitted successfully!");
-        // setTimeout(() => {
-        //   // router.push("/your-loan-details-page"); // add redirect path
-        //   router.push("/loans/0"); // Redirect to loan types page for now
-        // }, 2000);
+        setTimeout(() => {
+          //   // router.push("/your-loan-details-page"); // add redirect path
+          router.push("/loans/0"); // Redirect to loan types page for now
+        }, 2000);
       } else {
         setNotification("Failed to submit loan. Please try again.");
       }
