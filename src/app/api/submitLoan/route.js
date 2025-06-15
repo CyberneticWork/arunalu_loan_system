@@ -42,7 +42,10 @@ export async function POST(req) {
         loanData.residenttype || null,
         loanData.billtype || null,
         "pending",
-        loanData.submittedAt,
+        new Date(loanData.submittedAt)
+          .toISOString()
+          .slice(0, 19)
+          .replace("T", " "),
       ]
     );
 
