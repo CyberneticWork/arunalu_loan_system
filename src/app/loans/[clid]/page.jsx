@@ -62,6 +62,20 @@ function encodeBase64(loginId, chooseId, customerId) {
   return encodedData;
 }
 
+// Add this helper function above your component
+function getDurationLabel(frequency) {
+  switch (frequency) {
+    case "Daily":
+      return "Number of Days";
+    case "Weekly":
+      return "Number of Weeks";
+    case "Monthly":
+      return "Number of Months";
+    default:
+      return "Loan Duration";
+  }
+}
+
 export default function Home() {
   const router = useRouter();
   const params = useParams();
@@ -684,11 +698,11 @@ export default function Home() {
                     {/* Loan Duration */}
                     <div className="space-y-2">
                       <Label className="flex items-center">
-                        Loan Duration <span className="text-red-500 ml-1">*</span>
+                        {getDurationLabel(loanFrequency)} <span className="text-red-500 ml-1">*</span>
                       </Label>
                       <Input
                         type="number"
-                        min={1} 
+                        min={1}
                         value={loanDuration}
                         onChange={(e) => handleNumberInput(e, setLoanDuration)}
                         placeholder="Enter duration"
