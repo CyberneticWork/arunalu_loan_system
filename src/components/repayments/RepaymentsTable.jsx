@@ -97,7 +97,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
       );
     });
 
-    // If paymentMode is 'group', sort them by group_name
+    // Sort by group_name if group mode is selected
     if (filters.paymentMode === "group") {
       filtered.sort((a, b) =>
         (a.group_name || "").localeCompare(b.group_name || "")
@@ -135,6 +135,17 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
     setSelectedPayment(payment);
     setIsPaymentModalOpen(true);
   };
+
+  // Helper to calculate group totals
+  const groupTotals = {};
+  if (filters.paymentMode === "group") {
+    filteredData.forEach((payment) => {
+      if (!groupTotals[payment.group_name]) {
+        groupTotals[payment.group_name] = 0;
+      }
+      groupTotals[payment.group_name] += Number(payment.Totalpay) || 0;
+    });
+  }
 
   return (
     <>
@@ -252,6 +263,9 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                   <TableHead>Loan Type</TableHead>
                   <TableHead>Payment Mode</TableHead>
                   <TableHead>Total Amount</TableHead>
+                  {filters.paymentMode === "group" && (
+                    <TableHead>Group Total</TableHead>
+                  )}
                   <TableHead>Settlement</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -283,11 +297,11 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium
-      ${
-        payment.loanTypeMode === "group"
-          ? "bg-purple-100 text-purple-800"
-          : "bg-blue-100 text-blue-800"
-      }`}
+              ${
+                payment.loanTypeMode === "group"
+                  ? "bg-purple-100 text-purple-800"
+                  : "bg-blue-100 text-blue-800"
+              }`}
                         >
                           {payment.loanTypeMode === "group"
                             ? `Group (${payment.group_name || "N/A"})`
@@ -297,6 +311,13 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                       <TableCell>
                         LKR {Number(payment.Totalpay).toLocaleString()}
                       </TableCell>
+                      {filters.paymentMode === "group" && (
+                        <TableCell>
+                          LKR{" "}
+                          {groupTotals[payment.group_name]?.toLocaleString() ||
+                            "0"}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
