@@ -35,6 +35,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
     gs: "",
     ds: "",
     loanType: "",
+    paymentMode: "all",
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,10 +47,12 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
 
   // Filter functions
   const filterData = (data) => {
-    return data.filter((payment) => {
+    let filtered = data.filter((payment) => {
       const matchesSearch =
         !filters.search ||
-        payment.customerName?.toLowerCase().includes(filters.search.toLowerCase());
+        payment.customerName
+          ?.toLowerCase()
+          .includes(filters.search.toLowerCase());
 
       const matchesStatus =
         filters.status === "all" || payment.status === filters.status;
@@ -60,17 +63,27 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
 
       const matchesLocation =
         !filters.location ||
-        payment.location?.toLowerCase().includes(filters.location.toLowerCase());
+        payment.location
+          ?.toLowerCase()
+          .includes(filters.location.toLowerCase());
 
       const matchesGS =
-        !filters.gs || payment.gs?.toLowerCase().includes(filters.gs.toLowerCase());
+        !filters.gs ||
+        payment.gs?.toLowerCase().includes(filters.gs.toLowerCase());
 
       const matchesDS =
-        !filters.ds || payment.ds?.toLowerCase().includes(filters.ds.toLowerCase());
+        !filters.ds ||
+        payment.ds?.toLowerCase().includes(filters.ds.toLowerCase());
 
       const matchesLoanType =
         !filters.loanType ||
-        payment.loanType?.toLowerCase().includes(filters.loanType.toLowerCase());
+        payment.loanType
+          ?.toLowerCase()
+          .includes(filters.loanType.toLowerCase());
+
+      const matchesPaymentMode =
+        filters.paymentMode === "all" ||
+        payment.loanTypeMode === filters.paymentMode;
 
       return (
         matchesSearch &&
@@ -79,9 +92,19 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
         matchesLocation &&
         matchesGS &&
         matchesDS &&
-        matchesLoanType
+        matchesLoanType &&
+        matchesPaymentMode
       );
     });
+
+    // Sort by group_name if group mode is selected
+    if (filters.paymentMode === "group") {
+      filtered.sort((a, b) =>
+        (a.group_name || "").localeCompare(b.group_name || "")
+      );
+    }
+
+    return filtered;
   };
 
   // Get paginated data
@@ -113,6 +136,17 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
     setIsPaymentModalOpen(true);
   };
 
+  // Helper to calculate group totals
+  const groupTotals = {};
+  if (filters.paymentMode === "group") {
+    filteredData.forEach((payment) => {
+      if (!groupTotals[payment.group_name]) {
+        groupTotals[payment.group_name] = 0;
+      }
+      groupTotals[payment.group_name] += Number(payment.Totalpay) || 0;
+    });
+  }
+
   return (
     <>
       <Card className="w-full shadow-sm">
@@ -129,13 +163,17 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
               <Input
                 placeholder="Contact Number"
                 value={filters.telno}
-                onChange={(e) => setFilters({ ...filters, telno: e.target.value })}
+                onChange={(e) =>
+                  setFilters({ ...filters, telno: e.target.value })
+                }
                 className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
               />
               <Input
                 placeholder="Location"
                 value={filters.location}
-                onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+                onChange={(e) =>
+                  setFilters({ ...filters, location: e.target.value })
+                }
                 className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
               />
               <Input
@@ -153,9 +191,26 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
               <Input
                 placeholder="Loan Type"
                 value={filters.loanType}
-                onChange={(e) => setFilters({ ...filters, loanType: e.target.value })}
+                onChange={(e) =>
+                  setFilters({ ...filters, loanType: e.target.value })
+                }
                 className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
               />
+              <Select
+                value={filters.paymentMode}
+                onValueChange={(value) =>
+                  setFilters({ ...filters, paymentMode: value })
+                }
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Payment Mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="normal">Individual</SelectItem>
+                  <SelectItem value="group">Group</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex gap-2 mt-2 sm:mt-0">
               <Button
@@ -208,6 +263,9 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                   <TableHead>Loan Type</TableHead>
                   <TableHead>Payment Mode</TableHead>
                   <TableHead>Total Amount</TableHead>
+                  {filters.paymentMode === "group" && (
+                    <TableHead>Group Total</TableHead>
+                  )}
                   <TableHead>Settlement</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -239,11 +297,11 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium
-      ${
-        payment.loanTypeMode === "group"
-          ? "bg-purple-100 text-purple-800"
-          : "bg-blue-100 text-blue-800"
-      }`}
+              ${
+                payment.loanTypeMode === "group"
+                  ? "bg-purple-100 text-purple-800"
+                  : "bg-blue-100 text-blue-800"
+              }`}
                         >
                           {payment.loanTypeMode === "group"
                             ? `Group (${payment.group_name || "N/A"})`
@@ -253,6 +311,13 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                       <TableCell>
                         LKR {Number(payment.Totalpay).toLocaleString()}
                       </TableCell>
+                      {filters.paymentMode === "group" && (
+                        <TableCell>
+                          LKR{" "}
+                          {groupTotals[payment.group_name]?.toLocaleString() ||
+                            "0"}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
