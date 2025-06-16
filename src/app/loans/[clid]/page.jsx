@@ -883,7 +883,42 @@ export default function Home() {
                 </Button>
                 <Button
                   className="bg-yellow-500 hover:bg-yellow-600 w-full py-6"
-                  onClick={() => alert("Update button clicked!")}
+                  onClick={async () => {
+                    if (!selectedSubLoanCategory) return;
+                    try {
+                      const res = await fetch("/api/sub_loan/updateCatogory", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          id: selectedSubLoanCategory,
+                          loan_name: loanName,
+                          loan_amount: loanAmount,
+                          loan_rate: interestRate,
+                          service_charge: serviceCharge,
+                          loan_frequency: loanFrequency,
+                          loan_duration: loanDuration,
+                          total_amount: totalAmount,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (res.ok && data.code === "SUCCESS") {
+                        alert("Category updated successfully!");
+                        setInitialCategoryData({
+                          loan_name: loanName,
+                          loan_amount: loanAmount,
+                          loan_rate: interestRate,
+                          service_charge: serviceCharge,
+                          loan_frequency: loanFrequency,
+                          loan_duration: loanDuration,
+                          total_amount: totalAmount,
+                        });
+                      } else {
+                        alert(data.error || "Failed to update category.");
+                      }
+                    } catch (err) {
+                      alert("Failed to update category.");
+                    }
+                  }}
                   disabled={!isCategoryDirty}
                 >
                   UPDATE
