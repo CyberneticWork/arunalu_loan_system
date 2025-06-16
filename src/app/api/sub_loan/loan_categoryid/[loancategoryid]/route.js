@@ -10,7 +10,7 @@ export async function GET(req, { params }) {
     const db = await connectDB();
     // Replace 'your_table' with your actual table name
     const [rows] = await db.query(
-      "SELECT loan_name, loan_amount, loan_rate, service_charge, loan_frequency,loan_duration FROM sub_loan_types WHERE id = ? LIMIT 1",
+      "SELECT loan_name, loan_amount, loan_rate, service_charge, loan_frequency, loan_duration, total_amount FROM sub_loan_types WHERE id = ? LIMIT 1",
       [loancategoryid]
     );
     if (rows.length === 0) {
