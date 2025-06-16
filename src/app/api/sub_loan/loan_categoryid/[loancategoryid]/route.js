@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db";
 
-export async function GET(req, { params }) {
+export async function GET(req, context) {
+  const { params } = context;
   const { loancategoryid } = params;
   if (!loancategoryid) {
     return new Response(JSON.stringify({ error: "Missing category name" }), { status: 400 });
@@ -8,7 +9,6 @@ export async function GET(req, { params }) {
 
   try {
     const db = await connectDB();
-    // Replace 'your_table' with your actual table name
     const [rows] = await db.query(
       "SELECT loan_name, loan_amount, loan_rate, service_charge, loan_frequency, loan_duration, total_amount FROM sub_loan_types WHERE id = ? LIMIT 1",
       [loancategoryid]

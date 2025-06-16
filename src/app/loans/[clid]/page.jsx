@@ -290,7 +290,6 @@ export default function Home() {
   // Fetch sub-loan categories when loanType changes
   useEffect(() => {
     const fetchSubLoanCategories = async () => {
-      // Find the selected loan type object to get its id
       const selectedTypeObj = loanTypes.find((type) => type.name === loanType);
       if (!selectedTypeObj) {
         setSubLoanCategories([]);
@@ -304,7 +303,7 @@ export default function Home() {
         if (!res.ok) throw new Error("Failed to fetch sub-loan categories");
         const data = await res.json();
         setSubLoanCategories(data);
-        setSelectedSubLoanCategory(data.length > 0 ? data[0].id : "");
+        setSelectedSubLoanCategory(""); // Do not auto-select any category
       } catch (error) {
         setSubLoanCategories([]);
         setSelectedSubLoanCategory("");
@@ -319,7 +318,7 @@ export default function Home() {
       if (!res.ok) throw new Error("Failed to fetch loan types");
       const data = await res.json();
       setLoanTypes(data);
-      if (data.length > 0) setLoanType(data[0].name);
+      setLoanType(""); 
     } catch (error) {
       console.error("Error fetching loan types:", error);
     }
@@ -631,7 +630,7 @@ export default function Home() {
                   onChange={handleSubLoanCategoryChange}
                 >
                   <option value="" disabled>
-                    Select Sub-Loan Category
+                    Please select a sub-loan category
                   </option>
                   {subLoanCategories.map((category) => (
                     <option key={category.id} value={category.id}>
@@ -704,6 +703,9 @@ export default function Home() {
                   value={loanType}
                   onChange={(e) => setLoanType(e.target.value)}
                 >
+                  <option value="" disabled>
+                    Please select a loan type
+                  </option>
                   {loanTypes.map((type) => (
                     <option key={type.id} value={type.name}>
                       {type.name}
