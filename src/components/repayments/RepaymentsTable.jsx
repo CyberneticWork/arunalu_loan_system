@@ -150,10 +150,20 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
   return (
     <>
       <Card className="w-full shadow-sm">
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle className="text-xl font-semibold text-gray-800">
             Loan Repayments
           </CardTitle>
+          <div className="flex-1 flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-lg border-blue-500 text-blue-700 font-semibold shadow hover:bg-blue-100 transition-all duration-150 px-6 py-2"
+              onClick={() => window.print()}
+            >
+              Print forms
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent>
