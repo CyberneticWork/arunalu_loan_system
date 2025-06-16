@@ -870,18 +870,16 @@ export default function Home() {
                 ))}
               </div>
 
-              <div className="flex flex-col gap-4 mt-8">
-                {/* --- ADD YOUR NEW BUTTON HERE --- */}
-
+              <div className="flex flex-col md:flex-row gap-4 mt-8 w-full">
                 <Button
                   onClick={calculateTotal}
-                  className="bg-blue-600 hover:bg-blue-700 w-full py-6"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 py-6 text-base font-semibold flex items-center justify-center shadow-md rounded-lg transition-all duration-150"
                 >
                   <Calculator className="w-5 h-5 mr-2" />
                   CALCULATE TOTAL AMOUNT
                 </Button>
                 <Button
-                  className="bg-yellow-500 hover:bg-yellow-600 w-full py-6"
+                  className="flex-1 bg-yellow-500 hover:bg-yellow-600 py-6 text-base font-semibold flex items-center justify-center shadow-md rounded-lg transition-all duration-150"
                   onClick={async () => {
                     if (!selectedSubLoanCategory) return;
                     try {
@@ -923,6 +921,7 @@ export default function Home() {
                   UPDATE
                 </Button>
                 <div
+                  className="flex-1"
                   title={
                     !clientInfo.name || clientInfo.name === "none"
                       ? "Please select a valid client first"
@@ -931,7 +930,7 @@ export default function Home() {
                 >
                   <Button
                     onClick={handleSubmitLoan}
-                    className="bg-green-600 hover:bg-green-700 w-full py-6"
+                    className="bg-green-600 hover:bg-green-700 py-6 w-full text-base font-semibold flex items-center justify-center shadow-md rounded-lg transition-all duration-150"
                     disabled={
                       !clientInfo.name ||
                       clientInfo.name === "none" ||
