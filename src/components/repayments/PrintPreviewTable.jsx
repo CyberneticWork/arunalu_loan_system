@@ -408,6 +408,13 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
               </button>
+              <button
+                onClick={onClose}
+                className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Close
+              </button>
               {/* <button
                 onClick={handlePrint}
                 className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
