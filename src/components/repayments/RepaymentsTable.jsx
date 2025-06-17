@@ -20,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Filter, Eye } from "lucide-react";
+import { Search, Filter, Eye, Printer } from "lucide-react";
 import PaymentModal from "./PaymentModal";
+import PrintPreviewTable from "./PrintPreviewTable";
 import { useRouter } from "next/navigation";
 
 export default function RepaymentsTable({ data = [], onRefresh }) {
@@ -43,6 +44,8 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+  const [printData, setPrintData] = useState([]);
   const router = useRouter();
 
   // Filter functions
@@ -147,13 +150,33 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
     });
   }
 
+  const handlePrintPreview = async () => {
+    try {
+      const response = await fetch("/api/repayments/printFormData");
+      const data = await response.json();
+      setPrintData(data);
+      setIsPrintPreviewOpen(true);
+    } catch (error) {
+      console.error("Error fetching print data:", error);
+    }
+  };
+
   return (
     <>
       <Card className="w-full shadow-sm">
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle className="text-xl font-semibold text-gray-800">
             Loan Repayments
           </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrintPreview}
+            className="ml-auto"
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Print Preview
+          </Button>
         </CardHeader>
 
         <CardContent>
@@ -409,6 +432,12 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
         }
         isMultiple={Array.isArray(selectedPayment)}
         onPaymentComplete={onRefresh}
+      />
+
+      <PrintPreviewTable
+        isOpen={isPrintPreviewOpen}
+        onClose={() => setIsPrintPreviewOpen(false)}
+        data={printData}
       />
     </>
   );
