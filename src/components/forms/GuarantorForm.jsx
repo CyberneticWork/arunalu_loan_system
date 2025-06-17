@@ -479,11 +479,17 @@ export function GuarantorForm({
                 type="number"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                value={guarantorForm.accountno === "none" ? "" : guarantorForm.accountno}
+                value={
+                  guarantorForm.accountno === "none"
+                    ? ""
+                    : guarantorForm.accountno
+                }
                 onChange={(e) =>
                   onChange({
                     ...guarantorForm,
-                    accountno: e.target.value ? e.target.value.replace(/\D/g, "") : "none", // Set "none" if empty
+                    accountno: e.target.value
+                      ? e.target.value.replace(/\D/g, "")
+                      : "none", // Set "none" if empty
                   })
                 }
                 onBlur={() => handleBlur("accountno")}
@@ -499,7 +505,11 @@ export function GuarantorForm({
             <div>
               <Label className="text-base">Bank Name</Label>
               <Input
-                value={guarantorForm.bankname === "none" ? "" : guarantorForm.bankname}
+                value={
+                  guarantorForm.bankname === "none"
+                    ? ""
+                    : guarantorForm.bankname
+                }
                 onChange={(e) =>
                   onChange({
                     ...guarantorForm,
