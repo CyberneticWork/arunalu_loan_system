@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  Dialog, 
-  DialogContent, 
+import {
+  Dialog,
+  DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +15,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
-export default function RequestDetailModal({ request, onClose, onApprove, onReject }) {
+export default function RequestDetailModal({
+  request,
+  onClose,
+  onApprove,
+  onReject,
+}) {
   const {
     id,
     currentCustomerData,
@@ -24,7 +29,11 @@ export default function RequestDetailModal({ request, onClose, onApprove, onReje
     pendingSpouseData,
   } = request;
 
-  const formatGender = (gender) => (gender === 1 ? "Male" : "Female");
+  const formatGender = (gender) => {
+    if (gender === 1) return "Male";
+    if (gender === 0) return "Female";
+    return "N/A";
+  };
 
   // State for rejection note
   const [rejectionNote, setRejectionNote] = useState("");
@@ -50,24 +59,30 @@ export default function RequestDetailModal({ request, onClose, onApprove, onReje
   const DataComparison = ({ title, current, pending, fields }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
       <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-        <h3 className="font-medium text-gray-800 border-b pb-2">{title} (Current)</h3>
+        <h3 className="font-medium text-gray-800 border-b pb-2">
+          {title} (Current)
+        </h3>
         {fields.map((field) => (
           <div key={field.key} className="flex flex-col">
             <span className="text-sm text-gray-500">{field.label}</span>
             <span className="font-medium">
-              {current[field.key] || "N/A"}
+              {field.format ? field.format(current[field.key]) : (current[field.key] || "N/A")}
             </span>
           </div>
         ))}
       </div>
 
       <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-        <h3 className="font-medium text-gray-800 border-b pb-2">{title} (Pending)</h3>
+        <h3 className="font-medium text-gray-800 border-b pb-2">
+          {title} (Pending)
+        </h3>
         {fields.map((field) => (
           <div key={field.key} className="flex flex-col">
             <span className="text-sm text-gray-500">{field.label}</span>
-            <span className={`font-medium ${highlightChanges(current, pending, field.key) ? 'text-blue-600' : ''}`}>
-              {pending[field.key] || "N/A"}
+            <span
+              className={`font-medium ${highlightChanges(current, pending, field.key) ? 'text-blue-600' : ''}`}
+            >
+              {field.format ? field.format(pending[field.key]) : (pending[field.key] || "N/A")}
               {highlightChanges(current, pending, field.key) && (
                 <Badge variant="outline" className="ml-2 bg-blue-50">Changed</Badge>
               )}
@@ -79,23 +94,23 @@ export default function RequestDetailModal({ request, onClose, onApprove, onReje
   );
 
   const customerFields = [
-    { key: 'fullname', label: 'Full Name' },
-    { key: 'nic', label: 'NIC' },
-    { key: 'gender', label: 'Gender', format: formatGender },
-    { key: 'dob', label: 'Date of Birth' },
-    { key: 'telno', label: 'Tel No' },
-    { key: 'address', label: 'Address' },
-    { key: 'gs', label: 'GS' },
-    { key: 'ds', label: 'DS' },
-    { key: 'district', label: 'District' },
-    { key: 'province', label: 'Province' },
+    { key: "fullname", label: "Full Name" },
+    { key: "nic", label: "NIC" },
+    { key: "gender", label: "Gender", format: formatGender },
+    { key: "dob", label: "Date of Birth" },
+    { key: "telno", label: "Tel No" },
+    { key: "address", label: "Address" },
+    { key: "gs", label: "GS" },
+    { key: "ds", label: "DS" },
+    { key: "district", label: "District" },
+    { key: "province", label: "Province" },
   ];
 
   const spouseFields = [
-    { key: 'name', label: 'Name' },
-    { key: 'relation', label: 'Relation' },
-    { key: 'telno', label: 'Tel No' },
-    { key: 'address', label: 'Address' },
+    { key: "name", label: "Name" },
+    { key: "relation", label: "Relation" },
+    { key: "telno", label: "Tel No" },
+    { key: "address", label: "Address" },
   ];
 
   return (
@@ -115,22 +130,22 @@ export default function RequestDetailModal({ request, onClose, onApprove, onReje
             <TabsTrigger value="customer">Customer Details</TabsTrigger>
             <TabsTrigger value="spouse">Spouse Details</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="customer" className="mt-4">
-            <DataComparison 
-              title="Customer Information" 
-              current={currentCustomerData} 
-              pending={pendingCustomerData} 
-              fields={customerFields} 
+            <DataComparison
+              title="Customer Information"
+              current={currentCustomerData}
+              pending={pendingCustomerData}
+              fields={customerFields}
             />
           </TabsContent>
-          
+
           <TabsContent value="spouse" className="mt-4">
-            <DataComparison 
-              title="Spouse Information" 
-              current={currentSpouseData} 
-              pending={pendingSpouseData} 
-              fields={spouseFields} 
+            <DataComparison
+              title="Spouse Information"
+              current={currentSpouseData}
+              pending={pendingSpouseData}
+              fields={spouseFields}
             />
           </TabsContent>
         </Tabs>
@@ -162,7 +177,10 @@ export default function RequestDetailModal({ request, onClose, onApprove, onReje
           </div>
           <div className="flex gap-2">
             {rejectionNote === "" ? (
-              <Button variant="destructive" onClick={() => setRejectionNote(" ")}>
+              <Button
+                variant="destructive"
+                onClick={() => setRejectionNote(" ")}
+              >
                 Reject
               </Button>
             ) : (
