@@ -40,7 +40,9 @@ export default function CompletedRepaymentsPage() {
         payment.telno?.toLowerCase().includes(filters.telno.toLowerCase());
       const matchesLocation =
         !filters.location ||
-        payment.location?.toLowerCase().includes(filters.location.toLowerCase());
+        payment.location
+          ?.toLowerCase()
+          .includes(filters.location.toLowerCase());
       const matchesGS =
         !filters.gs ||
         payment.gs?.toLowerCase().includes(filters.gs.toLowerCase());
@@ -77,19 +79,23 @@ export default function CompletedRepaymentsPage() {
               type="text"
               placeholder="Contact Number"
               value={filters.telno}
-              onChange={(e) => setFilters({ ...filters, telno: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, telno: e.target.value })
+              }
               className="pl-4 pr-3 py-2 rounded-md border border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 bg-white text-gray-800 transition-all duration-150 shadow-sm placeholder-gray-400"
             />
             <input
               type="text"
-              placeholder="Location"
+              placeholder="Branch"
               value={filters.location}
-              onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, location: e.target.value })
+              }
               className="pl-4 pr-3 py-2 rounded-md border border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 bg-white text-gray-800 transition-all duration-150 shadow-sm placeholder-gray-400"
             />
             <input
               type="text"
-              placeholder="GS Division"
+              placeholder="Center"
               value={filters.gs}
               onChange={(e) => setFilters({ ...filters, gs: e.target.value })}
               className="pl-4 pr-3 py-2 rounded-md border border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 bg-white text-gray-800 transition-all duration-150 shadow-sm placeholder-gray-400"
@@ -103,7 +109,9 @@ export default function CompletedRepaymentsPage() {
             />
             <select
               value={filters.loanType}
-              onChange={(e) => setFilters({ ...filters, loanType: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, loanType: e.target.value })
+              }
               className="pl-4 pr-3 py-2 rounded-md border border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 bg-white text-gray-800 transition-all duration-150 shadow-sm"
             >
               <option value="">All</option>
@@ -125,8 +133,8 @@ export default function CompletedRepaymentsPage() {
                 <TableRow>
                   <TableHead>Contract No</TableHead>
                   <TableHead>Customer Name</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>GS Division</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Center</TableHead>
                   <TableHead>DS Office</TableHead>
                   <TableHead>Loan Type</TableHead>
                   <TableHead>Payment Mode</TableHead>

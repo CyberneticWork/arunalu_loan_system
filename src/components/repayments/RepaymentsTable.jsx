@@ -192,7 +192,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                 className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
               />
               <Input
-                placeholder="Location"
+                placeholder="Branch"
                 value={filters.location}
                 onChange={(e) =>
                   setFilters({ ...filters, location: e.target.value })
@@ -200,7 +200,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                 className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
               />
               <Input
-                placeholder="GS Division"
+                placeholder="Center"
                 value={filters.gs}
                 onChange={(e) => setFilters({ ...filters, gs: e.target.value })}
                 className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
