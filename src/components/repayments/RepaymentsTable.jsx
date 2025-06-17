@@ -280,8 +280,8 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                   </TableHead>
                   <TableHead>Contract No</TableHead>
                   <TableHead>Customer Name</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>GS Division</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Center</TableHead>
                   <TableHead>DS Office</TableHead>
                   <TableHead>Loan Type</TableHead>
                   <TableHead>Payment Mode</TableHead>
@@ -290,6 +290,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                     <TableHead>Group Total</TableHead>
                   )}
                   <TableHead>Settlement</TableHead>
+                  <TableHead>Paid Amount</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -351,6 +352,14 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                         >
                           LKR {Number(payment.remainingAmount).toLocaleString()}
                         </span>
+                      </TableCell>
+                      {/* Paid Amount */}
+                      <TableCell>
+                        LKR{" "}
+                        {(
+                          Number(payment.Totalpay) -
+                          Number(payment.remainingAmount)
+                        ).toLocaleString()}
                       </TableCell>
                       <TableCell>
                         <Button
