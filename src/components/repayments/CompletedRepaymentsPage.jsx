@@ -49,7 +49,7 @@ export default function CompletedRepaymentsPage() {
         payment.ds?.toLowerCase().includes(filters.ds.toLowerCase());
       const matchesLoanType =
         !filters.loanType ||
-        payment.loanType?.toLowerCase().includes(filters.loanType.toLowerCase());
+        payment.loanTypeMode?.toLowerCase() === filters.loanType.toLowerCase();
       return (
         matchesTelno &&
         matchesLocation &&
@@ -101,13 +101,15 @@ export default function CompletedRepaymentsPage() {
               onChange={(e) => setFilters({ ...filters, ds: e.target.value })}
               className="pl-4 pr-3 py-2 rounded-md border border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 bg-white text-gray-800 transition-all duration-150 shadow-sm placeholder-gray-400"
             />
-            <input
-              type="text"
-              placeholder="Loan Type"
+            <select
               value={filters.loanType}
               onChange={(e) => setFilters({ ...filters, loanType: e.target.value })}
-              className="pl-4 pr-3 py-2 rounded-md border border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 bg-white text-gray-800 transition-all duration-150 shadow-sm placeholder-gray-400"
-            />
+              className="pl-4 pr-3 py-2 rounded-md border border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 bg-white text-gray-800 transition-all duration-150 shadow-sm"
+            >
+              <option value="">All</option>
+              <option value="normal">Individual</option>
+              <option value="group">Group</option>
+            </select>
           </div>
         </div>
         {loading ? (

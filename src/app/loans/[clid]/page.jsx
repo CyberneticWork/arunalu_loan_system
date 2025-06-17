@@ -62,6 +62,20 @@ function encodeBase64(loginId, chooseId, customerId) {
   return encodedData;
 }
 
+// Add this helper function above your component
+function getDurationLabel(frequency) {
+  switch (frequency) {
+    case "Daily":
+      return "Number of Days";
+    case "Weekly":
+      return "Number of Weeks";
+    case "Monthly":
+      return "Number of Months";
+    default:
+      return "Loan Duration";
+  }
+}
+
 export default function Home() {
   const router = useRouter();
   const params = useParams();
@@ -110,6 +124,36 @@ export default function Home() {
   const [selectedManager, setSelectedManager] = useState(
     "Select Account Manager"
   );
+
+  const [categoryData, setCategoryData] = useState(null);
+
+  // Track initial category data for change detection
+  const [initialCategoryData, setInitialCategoryData] = useState(null);
+  const [isCategoryDirty, setIsCategoryDirty] = useState(false);
+
+  // Update isCategoryDirty if any field changes
+  useEffect(() => {
+    if (!initialCategoryData) {
+      setIsCategoryDirty(false);
+      return;
+    }
+    const dirty =
+      loanName !== (initialCategoryData.loan_name || "") ||
+      String(loanAmount) !== String(initialCategoryData.loan_amount || "") ||
+      String(interestRate) !== String(initialCategoryData.loan_rate || "") ||
+      String(serviceCharge) !== String(initialCategoryData.service_charge || "") ||
+      loanFrequency !== (initialCategoryData.loan_frequency || "Daily") ||
+      String(loanDuration) !== String(initialCategoryData.loan_duration || "");
+    setIsCategoryDirty(dirty);
+  }, [
+    loanName,
+    loanAmount,
+    interestRate,
+    serviceCharge,
+    loanFrequency,
+    loanDuration,
+    initialCategoryData,
+  ]);
 
   // Handle form submission for loan application
   const handleSubmitLoan = () => {
@@ -246,7 +290,6 @@ export default function Home() {
   // Fetch sub-loan categories when loanType changes
   useEffect(() => {
     const fetchSubLoanCategories = async () => {
-      // Find the selected loan type object to get its id
       const selectedTypeObj = loanTypes.find((type) => type.name === loanType);
       if (!selectedTypeObj) {
         setSubLoanCategories([]);
@@ -260,7 +303,7 @@ export default function Home() {
         if (!res.ok) throw new Error("Failed to fetch sub-loan categories");
         const data = await res.json();
         setSubLoanCategories(data);
-        setSelectedSubLoanCategory(data.length > 0 ? data[0].id : "");
+        setSelectedSubLoanCategory(""); // Do not auto-select any category
       } catch (error) {
         setSubLoanCategories([]);
         setSelectedSubLoanCategory("");
@@ -275,7 +318,7 @@ export default function Home() {
       if (!res.ok) throw new Error("Failed to fetch loan types");
       const data = await res.json();
       setLoanTypes(data);
-      if (data.length > 0) setLoanType(data[0].name);
+      setLoanType(""); 
     } catch (error) {
       console.error("Error fetching loan types:", error);
     }
@@ -428,6 +471,50 @@ export default function Home() {
     }
   };
 
+  // When sub-loan category changes, fetch and set all fields including total_amount
+  const handleSubLoanCategoryChange = async (e) => {
+    const categoryId = e.target.value;
+    setSelectedSubLoanCategory(categoryId);
+
+    try {
+      const res = await fetch(`/api/sub_loan/loan_categoryid/${categoryId}`);
+      if (!res.ok) throw new Error("Failed to fetch category data");
+      const data = await res.json();
+      if (data && data.loanData) {
+        setCategoryData(data.loanData);
+        setInitialCategoryData(data.loanData);
+
+        setLoanName(data.loanData.loan_name || "");
+        setLoanAmount(data.loanData.loan_amount || "");
+        setInterestRate(data.loanData.loan_rate || "");
+        setServiceCharge(data.loanData.service_charge || "");
+        setLoanFrequency(data.loanData.loan_frequency || "Daily");
+        setLoanDuration(data.loanData.loan_duration || "");
+        setTotalAmount(Number(data.loanData.total_amount) || 0); // Set total_amount from DB
+      } else {
+        setCategoryData(null);
+        setInitialCategoryData(null);
+        setLoanName("");
+        setLoanAmount("");
+        setInterestRate("");
+        setServiceCharge("");
+        setLoanFrequency("Daily");
+        setLoanDuration("");
+        setTotalAmount(0);
+      }
+    } catch (err) {
+      setCategoryData(null);
+      setInitialCategoryData(null);
+      setLoanName("");
+      setLoanAmount("");
+      setInterestRate("");
+      setServiceCharge("");
+      setLoanFrequency("Daily");
+      setLoanDuration("");
+      setTotalAmount(0);
+    }
+  };
+
   return (
     <>
       <div className="flex h-screen bg-gray-100 overflow-hidden">
@@ -531,7 +618,9 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Move Loan Type Selector up here */}
+           
+
+            {/* Loan Type Selector */}
             <div className="mb-4 w-full">
               <Label className="flex items-center mb-1 text-base">
                 Select Loan Type
@@ -542,6 +631,9 @@ export default function Home() {
                   value={loanType}
                   onChange={(e) => setLoanType(e.target.value)}
                 >
+                  <option value="" disabled>
+                    Please select a loan type
+                  </option>
                   {loanTypes.map((type) => (
                     <option key={type.id} value={type.name}>
                       {type.name}
@@ -601,222 +693,256 @@ export default function Home() {
                 </div>
               )}
             </div>
-            <Card className="w-full overflow-hidden">
-              <CardContent className="p-0">
-                <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-1"></div>
-                <div className="p-6">
-                  <h2 className="text-xl font-semibold text-gray-800 mb-6">
-                    Add Loan Category
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Loan Name */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center">
-                        Loan Name <span className="text-red-500 ml-1">*</span>
-                      </Label>
-                      <Input
-                        value={loanName}
-                        onChange={(e) => setLoanName(e.target.value)}
-                        placeholder="Enter loan name"
-                      />
-                    </div>
 
-                    {/* Loan Amount */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center">
-                        Loan Amount <span className="text-red-500 ml-1">*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        min={1} 
-                        value={loanAmount}
-                        onChange={(e) => handleNumberInput(e, setLoanAmount)}
-                        placeholder="Enter amount"
-                      />
-                    </div>
+           
 
-                    {/* Interest Rate */}
-                    <div className="space-y-2">
-                      <Label>Interest Rate (%)</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={interestRate}
-                        onChange={(e) => handleNumberInput(e, setInterestRate)}
-                        placeholder="Enter rate"
-                      />
-                    </div>
-
-                    {/* Service Charge */}
-                    <div className="space-y-2">
-                      <Label>Service Charge</Label>
-                      <Input
-                        type="number"
-                        min={0} 
-                        value={serviceCharge}
-                        onChange={(e) => handleNumberInput(e, setServiceCharge)}
-                        placeholder="Enter charge"
-                      />
-                    </div>
-
-                    {/* Total Amount */}
-                    <div className="space-y-2">
-                      <Label>Total Amount</Label>
-                      <div className="border rounded-md px-3 py-2 text-gray-800 font-bold bg-gray-50 min-h-[40px] flex items-center">
-                        LKR {totalAmount.toFixed(2)}
+            <div className="bg-white rounded-lg shadow p-6">
+               {/* Loan Category Selector */}
+            <div className="mb-4 w-full">
+              <Label className="flex items-center mb-1 text-base">
+                Select Sub-Loan Category
+              </Label>
+              <div className="flex gap-2">
+                <select
+                  className="border rounded-md px-3 py-1 text-gray-800 font-semibold bg-gray-50 min-h-[32px] w-full text-base"
+                  value={selectedSubLoanCategory}
+                  onChange={handleSubLoanCategoryChange}
+                >
+                  <option value="" disabled>
+                    Please select a sub-loan category
+                  </option>
+                  {subLoanCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.sub_loan_name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  onClick={() => setShowAddSubLoan(true)}
+                  className="whitespace-nowrap"
+                >
+                  + ADD
+                </Button>
+              </div>
+              {/* Modal/Dialog for adding new sub-loan category */}
+              {showAddSubLoan && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+                  
+                  <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+                    <h3 className="text-lg font-semibold mb-2">
+                      Add New Sub-Loan Category
+                    </h3>
+                    <input
+                      className="border rounded-md px-3 py-2 w-full mb-2"
+                      placeholder="Enter sub-loan category name"
+                      value={newSubLoanName}
+                      onChange={(e) => setNewSubLoanName(e.target.value)}
+                      disabled={addingSubLoan}
+                    />
+                    {addSubLoanError && (
+                      <div className="text-red-500 text-sm mb-2">
+                        {addSubLoanError}
                       </div>
-                    </div>
-
-                    {/* Loan Frequency */}
-                    <div className="space-y-2">
-                      <Label>Loan Frequency</Label>
-                      <select
-                        className="border rounded-md px-3 py-2 text-gray-800 font-bold bg-gray-50 min-h-[40px] flex items-center w-full"
-                        value={loanFrequency}
-                        onChange={(e) => setLoanFrequency(e.target.value)}
-                      >
-                        <option value="Daily">Daily</option>
-                        <option value="Weekly">Weekly</option>
-                        <option value="Monthly">Monthly</option>
-                      </select>
-                    </div>
-
-                    {/* Loan Duration */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center">
-                        Loan Duration <span className="text-red-500 ml-1">*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        min={1} 
-                        value={loanDuration}
-                        onChange={(e) => handleNumberInput(e, setLoanDuration)}
-                        placeholder="Enter duration"
-                      />
-                    </div>
-
-                    {/* Loan Category (Dropdown) */}
-                    <div className="space-y-2">
-                      <Label>Loan Category Name</Label>
-                      <div className="flex gap-2">
-                        <select
-                          className="border rounded-md px-3 py-2 w-full"
-                          value={selectedSubLoanCategory}
-                          onChange={(e) =>
-                            setSelectedSubLoanCategory(e.target.value)
-                          }
-                        >
-                          {subLoanCategories.length === 0 && (
-                            <option value="">
-                              No sub-loan categories available
-                            </option>
-                          )}
-                          {subLoanCategories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                              {category.sub_loan_name}
-                            </option>
-                          ))}
-                        </select>
-                        <Button
-                          type="button"
-                          onClick={() => setShowAddSubLoan(true)}
-                          className="whitespace-nowrap"
-                        >
-                          + ADD
-                        </Button>
-                      </div>
-                      {/* Modal/Dialog for adding new sub-loan category */}
-                      {showAddSubLoan && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-                          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
-                            <h3 className="text-lg font-semibold mb-2">
-                              Add New Sub-Loan Category
-                            </h3>
-                            <input
-                              className="border rounded-md px-3 py-2 w-full mb-2"
-                              placeholder="Enter sub-loan category name"
-                              value={newSubLoanName}
-                              onChange={(e) =>
-                                setNewSubLoanName(e.target.value)
-                              }
-                              disabled={addingSubLoan}
-                            />
-                            {addSubLoanError && (
-                              <div className="text-red-500 text-sm mb-2">
-                                {addSubLoanError}
-                              </div>
-                            )}
-                            <div className="flex gap-2 justify-end">
-                              <Button
-                                type="button"
-                                className="bg-gray-200 text-gray-700"
-                                onClick={() => {
-                                  setShowAddSubLoan(false);
-                                  setNewSubLoanName("");
-                                  setAddSubLoanError("");
-                                }}
-                                disabled={addingSubLoan}
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                type="button"
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                                onClick={handleAddCategory}
-                                disabled={addingSubLoan}
-                              >
-                                {addingSubLoan ? "Adding..." : "Add"}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {categories.map((category, index) => (
-                      <span
-                        key={index}
-                        className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
-                      >
-                        {category}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-col gap-4 mt-8">
-                    <Button
-                      onClick={calculateTotal}
-                      className="bg-blue-600 hover:bg-blue-700 w-full py-6"
-                    >
-                      <Calculator className="w-5 h-5 mr-2" />
-                      CALCULATE TOTAL AMOUNT
-                    </Button>
-
-                    <div
-                      title={
-                        !clientInfo.name || clientInfo.name === "none"
-                          ? "Please select a valid client first"
-                          : ""
-                      }
-                    >
+                    )}
+                    <div className="flex gap-2 justify-end">
                       <Button
-                        onClick={handleSubmitLoan}
-                        className="bg-green-600 hover:bg-green-700 w-full py-6"
-                        disabled={
-                          !clientInfo.name ||
-                          clientInfo.name === "none" ||
-                          totalAmount === 0
-                        }
+                        type="button"
+                        className="bg-gray-200 text-gray-700"
+                        onClick={() => {
+                          setShowAddSubLoan(false);
+                          setNewSubLoanName("");
+                          setAddSubLoanError("");
+                        }}
+                        disabled={addingSubLoan}
                       >
-                        <Plus className="w-5 h-5 mr-2" />
-                        SUBMIT LOAN APPLICATION
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={handleAddCategory}
+                        disabled={addingSubLoan}
+                      >
+                        {addingSubLoan ? "Adding..." : "Add"}
                       </Button>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Loan Name */}
+                <div className="space-y-2">
+                  <Label className="flex items-center">
+                    Loan Name <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    value={loanName}
+                    onChange={(e) => setLoanName(e.target.value)}
+                    placeholder="Enter loan name"
+                  />
+                </div>
+
+                {/* Loan Amount */}
+                <div className="space-y-2">
+                  <Label className="flex items-center">
+                    Loan Amount <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={loanAmount}
+                    onChange={(e) => handleNumberInput(e, setLoanAmount)}
+                    placeholder="Enter amount"
+                  />
+                </div>
+
+                {/* Interest Rate */}
+                <div className="space-y-2">
+                  <Label>Interest Rate (%)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={interestRate}
+                    onChange={(e) => handleNumberInput(e, setInterestRate)}
+                    placeholder="Enter rate"
+                  />
+                </div>
+
+                {/* Service Charge */}
+                <div className="space-y-2">
+                  <Label>Service Charge</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={serviceCharge}
+                    onChange={(e) => handleNumberInput(e, setServiceCharge)}
+                    placeholder="Enter charge"
+                  />
+                </div>
+
+                {/* Total Amount */}
+                <div className="space-y-2">
+                  <Label>Total Amount</Label>
+                  <div className="border rounded-md px-3 py-2 text-gray-800 font-bold bg-gray-50 min-h-[40px] flex items-center">
+                    LKR {totalAmount.toFixed(2)}
+                  </div>
+                </div>
+
+                {/* Loan Frequency */}
+                <div className="space-y-2">
+                  <Label>Loan Frequency</Label>
+                  <select
+                    className="border rounded-md px-3 py-2 text-gray-800 font-bold bg-gray-50 min-h-[40px] flex items-center w-full"
+                    value={loanFrequency}
+                    onChange={(e) => setLoanFrequency(e.target.value)}
+                  >
+                    <option value="Daily">Daily</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Monthly">Monthly</option>
+                  </select>
+                </div>
+
+                {/* Loan Duration */}
+                <div className="space-y-2">
+                  <Label className="flex items-center">
+                    {getDurationLabel(loanFrequency)}{" "}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={loanDuration}
+                    onChange={(e) => handleNumberInput(e, setLoanDuration)}
+                    placeholder="Enter duration"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {categories.map((category, index) => (
+                  <span
+                    key={index}
+                    className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
+                  >
+                    {category}
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-4 mt-8 w-full">
+                <Button
+                  onClick={calculateTotal}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 py-6 text-base font-semibold flex items-center justify-center shadow-md rounded-lg transition-all duration-150"
+                >
+                  <Calculator className="w-5 h-5 mr-2" />
+                  CALCULATE TOTAL AMOUNT
+                </Button>
+                <Button
+                  className="flex-1 bg-yellow-500 hover:bg-yellow-600 py-6 text-base font-semibold flex items-center justify-center shadow-md rounded-lg transition-all duration-150"
+                  onClick={async () => {
+                    if (!selectedSubLoanCategory) return;
+                    try {
+                      const res = await fetch("/api/sub_loan/updateCatogory", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          id: selectedSubLoanCategory,
+                          loan_name: loanName,
+                          loan_amount: loanAmount,
+                          loan_rate: interestRate,
+                          service_charge: serviceCharge,
+                          loan_frequency: loanFrequency,
+                          loan_duration: loanDuration,
+                          total_amount: totalAmount,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (res.ok && data.code === "SUCCESS") {
+                        alert("Category updated successfully!");
+                        setInitialCategoryData({
+                          loan_name: loanName,
+                          loan_amount: loanAmount,
+                          loan_rate: interestRate,
+                          service_charge: serviceCharge,
+                          loan_frequency: loanFrequency,
+                          loan_duration: loanDuration,
+                          total_amount: totalAmount,
+                        });
+                      } else {
+                        alert(data.error || "Failed to update category.");
+                      }
+                    } catch (err) {
+                      alert("Failed to update category.");
+                    }
+                  }}
+                  disabled={!isCategoryDirty}
+                >
+                  UPDATE
+                </Button>
+                <div
+                  className="flex-1"
+                  title={
+                    !clientInfo.name || clientInfo.name === "none"
+                      ? "Please select a valid client first"
+                      : ""
+                  }
+                >
+                  <Button
+                    onClick={handleSubmitLoan}
+                    className="bg-green-600 hover:bg-green-700 py-6 w-full text-base font-semibold flex items-center justify-center shadow-md rounded-lg transition-all duration-150"
+                    disabled={
+                      !clientInfo.name ||
+                      clientInfo.name === "none" ||
+                      totalAmount === 0
+                    }
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    SUBMIT LOAN APPLICATION
+                  </Button>
+                </div>
+              </div>
+            </div>
           </main>
         </div>
       </div>
