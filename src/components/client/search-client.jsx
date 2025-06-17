@@ -128,7 +128,7 @@ export function SearchClient({ clients, onAddNewClick, loading, onSearch, search
               <div className="text-sm text-gray-600 mb-1">ID: <span className="font-mono break-all">CLN-{client.id.toString().padStart(3, '0')}</span></div>
               <div className="text-sm text-gray-600 mb-1 break-all">NIC: {client.nic}</div>
               <div className="text-sm text-gray-600 mb-1">Telephone: {client.telno || <span className="text-gray-400">N/A</span>}</div>
-              <div className="text-sm text-gray-600 mb-1">Gender: {typeof client.gender === 'number' ? (client.gender === 1 ? 'Male' : client.gender === 2 ? 'Female' : client.gender) : client.gender}</div>
+              <div className="text-sm text-gray-600 mb-1">Gender: {typeof client.gender === 'number' ? (client.gender === 1 ? 'Male' : client.gender === 0 ? 'Female' : client.gender) : client.gender}</div>
               <div className="text-sm text-gray-600 mb-1 break-all">Address: <span className="break-words">{client.address}</span></div>
               <div className="text-sm text-gray-600 mb-1">District: {client.district}</div>
               <div className="text-sm text-gray-600 mb-2">Active Loans: <Badge variant={client.activeLoans > 0 ? "default" : "outline"} className={client.activeLoans > 0 ? "bg-blue-100 text-blue-800 hover:bg-blue-100" : ""}>{client.activeLoans > 0 ? `${client.activeLoans} Active Loans` : "No Loans"}</Badge></div>
