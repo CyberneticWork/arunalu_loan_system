@@ -192,7 +192,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                 className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
               />
               <Input
-                placeholder="Location"
+                placeholder="Branch"
                 value={filters.location}
                 onChange={(e) =>
                   setFilters({ ...filters, location: e.target.value })
@@ -200,7 +200,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                 className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
               />
               <Input
-                placeholder="GS Division"
+                placeholder="Center"
                 value={filters.gs}
                 onChange={(e) => setFilters({ ...filters, gs: e.target.value })}
                 className="pl-3 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
@@ -280,16 +280,18 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                   </TableHead>
                   <TableHead>Contract No</TableHead>
                   <TableHead>Customer Name</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>GS Division</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Center</TableHead>
                   <TableHead>DS Office</TableHead>
                   <TableHead>Loan Type</TableHead>
                   <TableHead>Payment Mode</TableHead>
                   <TableHead>Total Amount</TableHead>
+                  <TableHead>Interest Rate</TableHead>
                   {filters.paymentMode === "group" && (
                     <TableHead>Group Total</TableHead>
                   )}
                   <TableHead>Settlement</TableHead>
+                  <TableHead>Paid Amount</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -331,6 +333,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                             : payment.loanTypeMode}
                         </span>
                       </TableCell>
+
                       <TableCell>
                         LKR {Number(payment.Totalpay).toLocaleString()}
                       </TableCell>
@@ -341,6 +344,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                             "0"}
                         </TableCell>
                       )}
+                      <TableCell>{payment.rate}%</TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -351,6 +355,14 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                         >
                           LKR {Number(payment.remainingAmount).toLocaleString()}
                         </span>
+                      </TableCell>
+                      {/* Paid Amount */}
+                      <TableCell>
+                        LKR{" "}
+                        {(
+                          Number(payment.Totalpay) -
+                          Number(payment.remainingAmount)
+                        ).toLocaleString()}
                       </TableCell>
                       <TableCell>
                         <Button

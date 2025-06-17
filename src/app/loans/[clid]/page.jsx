@@ -141,7 +141,8 @@ export default function Home() {
       loanName !== (initialCategoryData.loan_name || "") ||
       String(loanAmount) !== String(initialCategoryData.loan_amount || "") ||
       String(interestRate) !== String(initialCategoryData.loan_rate || "") ||
-      String(serviceCharge) !== String(initialCategoryData.service_charge || "") ||
+      String(serviceCharge) !==
+        String(initialCategoryData.service_charge || "") ||
       loanFrequency !== (initialCategoryData.loan_frequency || "Daily") ||
       String(loanDuration) !== String(initialCategoryData.loan_duration || "");
     setIsCategoryDirty(dirty);
@@ -318,7 +319,7 @@ export default function Home() {
       if (!res.ok) throw new Error("Failed to fetch loan types");
       const data = await res.json();
       setLoanTypes(data);
-      setLoanType(""); 
+      setLoanType("");
     } catch (error) {
       console.error("Error fetching loan types:", error);
     }
@@ -384,6 +385,7 @@ export default function Home() {
     }
     setAddingSubLoan(true);
     try {
+      // 1. Create the sub-loan type
       const res = await fetch("/api/sub_loan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -398,8 +400,21 @@ export default function Home() {
         setAddingSubLoan(false);
         return;
       }
+      const created = await res.json();
+
+      // 2. Fetch the newly created row by id
+      const fetchRes = await fetch(`/api/sub_loan?id=${created.id}`);
+      if (!fetchRes.ok) {
+        setAddSubLoanError("Failed to fetch new sub-loan data.");
+        setAddingSubLoan(false);
+        return;
+      }
+      const fetchData = await fetchRes.json();
+
+      // 3. Set the new sub-loan as selected and load its data into the form
       setNewSubLoanName("");
       setShowAddSubLoan(false);
+
       // Refresh sub-loan categories
       const refreshed = await fetch(
         `/api/sub_loan?mainLoanId=${selectedTypeObj.id}`
@@ -407,9 +422,37 @@ export default function Home() {
       if (refreshed.ok) {
         const data = await refreshed.json();
         setSubLoanCategories(data);
-        setSelectedSubLoanCategory(
-          data.length > 0 ? data[data.length - 1].id : ""
-        );
+        setSelectedSubLoanCategory(created.id); // Select the new one
+      }
+
+      // Now fetch and load the null/default data for the new sub-loan
+      // (Assuming you have an endpoint like /api/sub_loan/loan_categoryid/:id)
+      const catRes = await fetch(`/api/sub_loan/loan_categoryid/${created.id}`);
+      if (catRes.ok) {
+        const catData = await catRes.json();
+        if (catData && catData.loanData) {
+          setCategoryData(catData.loanData);
+          setInitialCategoryData(catData.loanData);
+
+          setLoanName(catData.loanData.loan_name || "");
+          setLoanAmount(catData.loanData.loan_amount || "");
+          setInterestRate(catData.loanData.loan_rate || "");
+          setServiceCharge(catData.loanData.service_charge || "");
+          setLoanFrequency(catData.loanData.loan_frequency || "Daily");
+          setLoanDuration(catData.loanData.loan_duration || "");
+          setTotalAmount(Number(catData.loanData.total_amount) || 0);
+        } else {
+          // fallback to empty
+          setCategoryData(null);
+          setInitialCategoryData(null);
+          setLoanName("");
+          setLoanAmount("");
+          setInterestRate("");
+          setServiceCharge("");
+          setLoanFrequency("Daily");
+          setLoanDuration("");
+          setTotalAmount(0);
+        }
       }
     } catch (error) {
       setAddSubLoanError("Failed to add sub-loan category.");
@@ -618,8 +661,6 @@ export default function Home() {
               ))}
             </div>
 
-           
-
             {/* Loan Type Selector */}
             <div className="mb-4 w-full">
               <Label className="flex items-center mb-1 text-base">
@@ -694,83 +735,80 @@ export default function Home() {
               )}
             </div>
 
-           
-
             <div className="bg-white rounded-lg shadow p-6">
-               {/* Loan Category Selector */}
-            <div className="mb-4 w-full">
-              <Label className="flex items-center mb-1 text-base">
-                Select Sub-Loan Category
-              </Label>
-              <div className="flex gap-2">
-                <select
-                  className="border rounded-md px-3 py-1 text-gray-800 font-semibold bg-gray-50 min-h-[32px] w-full text-base"
-                  value={selectedSubLoanCategory}
-                  onChange={handleSubLoanCategoryChange}
-                >
-                  <option value="" disabled>
-                    Please select a sub-loan category
-                  </option>
-                  {subLoanCategories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.sub_loan_name}
+              {/* Loan Category Selector */}
+              <div className="mb-4 w-full">
+                <Label className="flex items-center mb-1 text-base">
+                  Select Sub-Loan Category
+                </Label>
+                <div className="flex gap-2">
+                  <select
+                    className="border rounded-md px-3 py-1 text-gray-800 font-semibold bg-gray-50 min-h-[32px] w-full text-base"
+                    value={selectedSubLoanCategory}
+                    onChange={handleSubLoanCategoryChange}
+                  >
+                    <option value="" disabled>
+                      Please select a sub-loan category
                     </option>
-                  ))}
-                </select>
-                <Button
-                  type="button"
-                  onClick={() => setShowAddSubLoan(true)}
-                  className="whitespace-nowrap"
-                >
-                  + ADD
-                </Button>
-              </div>
-              {/* Modal/Dialog for adding new sub-loan category */}
-              {showAddSubLoan && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-                  
-                  <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
-                    <h3 className="text-lg font-semibold mb-2">
-                      Add New Sub-Loan Category
-                    </h3>
-                    <input
-                      className="border rounded-md px-3 py-2 w-full mb-2"
-                      placeholder="Enter sub-loan category name"
-                      value={newSubLoanName}
-                      onChange={(e) => setNewSubLoanName(e.target.value)}
-                      disabled={addingSubLoan}
-                    />
-                    {addSubLoanError && (
-                      <div className="text-red-500 text-sm mb-2">
-                        {addSubLoanError}
+                    {subLoanCategories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.sub_loan_name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    onClick={() => setShowAddSubLoan(true)}
+                    className="whitespace-nowrap"
+                  >
+                    + ADD
+                  </Button>
+                </div>
+                {/* Modal/Dialog for adding new sub-loan category */}
+                {showAddSubLoan && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+                      <h3 className="text-lg font-semibold mb-2">
+                        Add New Sub-Loan Category
+                      </h3>
+                      <input
+                        className="border rounded-md px-3 py-2 w-full mb-2"
+                        placeholder="Enter sub-loan category name"
+                        value={newSubLoanName}
+                        onChange={(e) => setNewSubLoanName(e.target.value)}
+                        disabled={addingSubLoan}
+                      />
+                      {addSubLoanError && (
+                        <div className="text-red-500 text-sm mb-2">
+                          {addSubLoanError}
+                        </div>
+                      )}
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          type="button"
+                          className="bg-gray-200 text-gray-700"
+                          onClick={() => {
+                            setShowAddSubLoan(false);
+                            setNewSubLoanName("");
+                            setAddSubLoanError("");
+                          }}
+                          disabled={addingSubLoan}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={handleAddCategory}
+                          disabled={addingSubLoan}
+                        >
+                          {addingSubLoan ? "Adding..." : "Add"}
+                        </Button>
                       </div>
-                    )}
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        type="button"
-                        className="bg-gray-200 text-gray-700"
-                        onClick={() => {
-                          setShowAddSubLoan(false);
-                          setNewSubLoanName("");
-                          setAddSubLoanError("");
-                        }}
-                        disabled={addingSubLoan}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                        onClick={handleAddCategory}
-                        disabled={addingSubLoan}
-                      >
-                        {addingSubLoan ? "Adding..." : "Add"}
-                      </Button>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Loan Name */}
                 <div className="space-y-2">
