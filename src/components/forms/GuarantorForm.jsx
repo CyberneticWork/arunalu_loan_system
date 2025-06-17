@@ -79,10 +79,10 @@ export function GuarantorForm({
         if (!value) return "District is required";
         break;
       case "accountno":
-        if (!value) return "Bank Account No is required";
+        return ""; // Bank Account No is optional, no validation needed
         break;
       case "bankname":
-        if (!value) return "Bank Name is required";
+        return ""; // Bank Name is optional, no validation needed
         break;
       default:
         return "";
@@ -169,14 +169,14 @@ export function GuarantorForm({
     }
 
     // Bank Account No validation
-    if (!guarantorForm.accountno) {
-      newErrors.accountno = "Bank Account No is required";
-    }
+    // if (!guarantorForm.accountno) {
+    //   newErrors.accountno = "Bank Account No is required";
+    // }
 
     // Bank Name validation
-    if (!guarantorForm.bankname) {
-      newErrors.bankname = "Bank Name is required";
-    }
+    // if (!guarantorForm.bankname) {
+    //   newErrors.bankname = "Bank Name is required";
+    // }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -474,22 +474,26 @@ export function GuarantorForm({
 
             {/* Bank Account No */}
             <div>
-              <Label className="text-base">
-                Bank Account No <span className="text-red-500">*</span>
-              </Label>
+              <Label className="text-base">Bank Account No</Label>
               <Input
                 type="number"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                value={guarantorForm.accountno}
+                value={
+                  guarantorForm.accountno === "none"
+                    ? ""
+                    : guarantorForm.accountno
+                }
                 onChange={(e) =>
                   onChange({
                     ...guarantorForm,
-                    accountno: e.target.value.replace(/\D/g, ""),
+                    accountno: e.target.value
+                      ? e.target.value.replace(/\D/g, "")
+                      : "none", // Set "none" if empty
                   })
                 }
                 onBlur={() => handleBlur("accountno")}
-                placeholder="Account Number"
+                placeholder="Account Number (Optional)"
                 className={errors.accountno ? "border-red-500" : ""}
               />
               {errors.accountno && (
@@ -499,16 +503,21 @@ export function GuarantorForm({
 
             {/* Bank Name */}
             <div>
-              <Label className="text-base">
-                Bank Name <span className="text-red-500">*</span>
-              </Label>
+              <Label className="text-base">Bank Name</Label>
               <Input
-                value={guarantorForm.bankname}
+                value={
+                  guarantorForm.bankname === "none"
+                    ? ""
+                    : guarantorForm.bankname
+                }
                 onChange={(e) =>
-                  onChange({ ...guarantorForm, bankname: e.target.value })
+                  onChange({
+                    ...guarantorForm,
+                    bankname: e.target.value || "none", // Set "none" if empty
+                  })
                 }
                 onBlur={() => handleBlur("bankname")}
-                placeholder="Bank Name"
+                placeholder="Bank Name (Optional)"
                 className={errors.bankname ? "border-red-500" : ""}
               />
               {errors.bankname && (
