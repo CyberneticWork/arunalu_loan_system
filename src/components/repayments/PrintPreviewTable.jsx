@@ -2,7 +2,8 @@
 
 import React from "react";
 import { useState } from "react";
-import { Printer, X } from "lucide-react";
+import { Printer, X, Download } from "lucide-react";
+import jsPDF from "jspdf";
 
 export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
   const [filter, setFilter] = useState("all");
@@ -18,36 +19,44 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
 
   // Calculate number of pages needed
   const ROWS_PER_PAGE = 10;
-  const totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE);
+  const totalPages = Math.ceil(
+    Math.max(filteredData.length, 1) / ROWS_PER_PAGE
+  );
 
-  // Generate empty rows for the last page if needed
-  const generateEmptyRows = (pageIndex) => {
+  // Generate page data with exactly 10 rows (including empty rows)
+  const getPageData = (pageIndex) => {
     const startIdx = pageIndex * ROWS_PER_PAGE;
-    const pageData = filteredData.slice(startIdx, startIdx + ROWS_PER_PAGE);
-    const emptyRowCount = Math.max(ROWS_PER_PAGE - pageData.length, 0);
-    return Array(emptyRowCount).fill({
-      loan_id: "empty",
-      group_name: "",
-      customer_name: "",
-      contact: "",
-      installment: "",
-      term: "",
-      Totalpay: "",
-      Outstanding_amount: "",
-    });
+    const actualData = filteredData.slice(startIdx, startIdx + ROWS_PER_PAGE);
+    const emptyRowsNeeded = ROWS_PER_PAGE - actualData.length;
+
+    const emptyRows = Array(emptyRowsNeeded)
+      .fill(null)
+      .map((_, index) => ({
+        loan_id: `empty-${pageIndex}-${index}`,
+        group_name: "",
+        customer_name: "",
+        contact: "",
+        installment: "",
+        term: "",
+        Totalpay: 0,
+        Outstanding_amount: 0,
+        isEmpty: true,
+      }));
+
+    return [...actualData, ...emptyRows];
   };
 
-  // Calculate totals for a specific page
+  // Calculate totals for a specific page (only counting non-empty rows)
   const calculatePageTotals = (pageIndex) => {
     const startIdx = pageIndex * ROWS_PER_PAGE;
     const pageData = filteredData.slice(startIdx, startIdx + ROWS_PER_PAGE);
     return {
       totalLoanAmount: pageData.reduce(
-        (sum, item) => sum + Number(item.Totalpay),
+        (sum, item) => sum + Number(item.Totalpay || 0),
         0
       ),
       totalOutstanding: pageData.reduce(
-        (sum, item) => sum + Number(item.Outstanding_amount),
+        (sum, item) => sum + Number(item.Outstanding_amount || 0),
         0
       ),
     };
@@ -55,8 +64,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
 
   // Generate table for a specific page
   const TablePage = ({ pageIndex }) => {
-    const startIdx = pageIndex * ROWS_PER_PAGE;
-    const pageData = filteredData.slice(startIdx, startIdx + ROWS_PER_PAGE);
+    const pageData = getPageData(pageIndex);
     const { totalLoanAmount, totalOutstanding } =
       calculatePageTotals(pageIndex);
 
@@ -107,58 +115,48 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
             </tr>
           </thead>
           <tbody>
-            {[...pageData, ...generateEmptyRows(pageIndex)].map(
-              (item, index) => (
-                <tr
-                  key={`${item.loan_id}-${index}`}
-                  className={`hover:bg-gray-50 ${
-                    item.loan_id === "empty" ? "h-[52px]" : ""
-                  }`}
-                >
-                  <td className="border border-gray-200 px-4 py-3">
-                    {item.loan_id !== "empty"
-                      ? item.group_name || "Individual"
-                      : ""}
-                  </td>
-                  <td className="border border-gray-200 px-4 py-3">
-                    {item.loan_id !== "empty" ? item.customer_name : ""}
-                  </td>
-                  <td className="border border-gray-200 px-4 py-3 font-mono text-sm">
-                    {item.loan_id !== "empty" ? item.contact : ""}
-                  </td>
-                  <td className="border border-gray-200 px-4 py-3 font-mono text-sm">
-                    {item.loan_id !== "empty"
-                      ? `${item.installment} × ${item.term}`
-                      : ""}
-                  </td>
-                  <td className="border border-gray-200 px-4 py-3 text-right">
-                    {item.loan_id !== "empty"
-                      ? `LKR ${Number(item.Totalpay).toLocaleString()}`
-                      : ""}
-                  </td>
-                  <td className="border border-gray-200 px-4 py-3 text-right text-orange-600">
-                    {item.loan_id !== "empty"
-                      ? `LKR ${Number(
-                          item.Outstanding_amount
-                        ).toLocaleString()}`
-                      : ""}
-                  </td>
-                  {/* Add 4 sets of empty date and checkbox cells */}
-                  {[1, 2, 3, 4].map((num) => (
-                    <React.Fragment key={`attendance-${index}-${num}`}>
-                      <td className="border border-gray-200 px-4 py-3 text-center">
-                        <div className="h-8 border-b border-dotted border-gray-400"></div>
-                      </td>
-                      <td className="border border-gray-200 px-4 py-3 text-center">
-                        <div className="flex justify-center items-center h-8">
-                          <div className="w-5 h-5 border border-gray-400"></div>
-                        </div>
-                      </td>
-                    </React.Fragment>
-                  ))}
-                </tr>
-              )
-            )}
+            {pageData.map((item, index) => (
+              <tr
+                key={item.loan_id || `row-${pageIndex}-${index}`}
+                className="hover:bg-gray-50 h-[52px]"
+              >
+                <td className="border border-gray-200 px-4 py-3">
+                  {!item.isEmpty ? item.group_name || "Individual" : ""}
+                </td>
+                <td className="border border-gray-200 px-4 py-3">
+                  {!item.isEmpty ? item.customer_name : ""}
+                </td>
+                <td className="border border-gray-200 px-4 py-3 font-mono text-sm">
+                  {!item.isEmpty ? item.contact : ""}
+                </td>
+                <td className="border border-gray-200 px-4 py-3 font-mono text-sm">
+                  {!item.isEmpty ? `${item.installment} × ${item.term}` : ""}
+                </td>
+                <td className="border border-gray-200 px-4 py-3 text-right">
+                  {!item.isEmpty && item.Totalpay
+                    ? `LKR ${Number(item.Totalpay).toLocaleString()}`
+                    : ""}
+                </td>
+                <td className="border border-gray-200 px-4 py-3 text-right text-orange-600">
+                  {!item.isEmpty && item.Outstanding_amount
+                    ? `LKR ${Number(item.Outstanding_amount).toLocaleString()}`
+                    : ""}
+                </td>
+                {/* Add 4 sets of empty date and checkbox cells */}
+                {[1, 2, 3, 4].map((num) => (
+                  <React.Fragment key={`attendance-${index}-${num}`}>
+                    <td className="border border-gray-200 px-4 py-3 text-center">
+                      <div className="h-8 border-b border-dotted border-gray-400"></div>
+                    </td>
+                    <td className="border border-gray-200 px-4 py-3 text-center">
+                      <div className="flex justify-center items-center h-8">
+                        <div className="w-5 h-5 border border-gray-400"></div>
+                      </div>
+                    </td>
+                  </React.Fragment>
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
         <div className="page-totals">
@@ -199,6 +197,164 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
     if (actionButtons) actionButtons.style.display = "flex";
   };
 
+  const generatePDF = () => {
+    const doc = new jsPDF("l", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 10;
+
+    // Process each page
+    for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+      if (pageIndex > 0) {
+        doc.addPage();
+      }
+
+      let y = margin;
+
+      // Add title
+      doc.setFontSize(16);
+      doc.text("Loan Report", margin, y);
+
+      // Add date
+      doc.setFontSize(10);
+      doc.text(
+        `Generated on ${new Date().toLocaleDateString("en-GB")} - Page ${
+          pageIndex + 1
+        }`,
+        margin,
+        y + 7
+      );
+
+      y += 20;
+
+      // Define table structure
+      const columns = [
+        { header: "Group Name", width: 25 },
+        { header: "Member Name", width: 35 },
+        { header: "Contact", width: 25 },
+        { header: "Installment / Term", width: 30 },
+        { header: "Loan Amount", width: 30 },
+        { header: "Outstanding", width: 30 },
+        { header: "Date 1", width: 15 },
+        { header: "Ate 1", width: 12 },
+        { header: "Date 2", width: 15 },
+        { header: "Ate 2", width: 12 },
+        { header: "Date 3", width: 15 },
+        { header: "Ate 3", width: 12 },
+        { header: "Date 4", width: 15 },
+        { header: "Ate 4", width: 12 },
+      ];
+
+      // Draw table header
+      let x = margin;
+      doc.setFillColor(245, 245, 245);
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.1);
+
+      // Draw header background and borders
+      columns.forEach((col) => {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(x, y, col.width, 10, "FD");
+        doc.setFontSize(8);
+        doc.setTextColor(0);
+        doc.text(col.header, x + 2, y + 6);
+        x += col.width;
+      });
+
+      y += 10;
+
+      // Get page data (exactly 10 rows)
+      const pageData = getPageData(pageIndex);
+
+      // Draw exactly 10 rows
+      pageData.forEach((item, rowIndex) => {
+        x = margin;
+        const rowHeight = 10;
+
+        // Draw cell backgrounds and borders
+        columns.forEach((col, colIndex) => {
+          doc.rect(x, y, col.width, rowHeight, "S");
+
+          // Add cell content only for non-empty rows
+          if (!item.isEmpty) {
+            doc.setFontSize(8);
+            let text = "";
+            switch (colIndex) {
+              case 0:
+                text = item.group_name || "Individual";
+                break;
+              case 1:
+                text = item.customer_name || "";
+                break;
+              case 2:
+                text = item.contact || "";
+                break;
+              case 3:
+                text =
+                  item.installment && item.term
+                    ? `${item.installment} × ${item.term}`
+                    : "";
+                break;
+              case 4:
+                text = item.Totalpay
+                  ? `LKR ${Number(item.Totalpay).toLocaleString()}`
+                  : "";
+                break;
+              case 5:
+                text = item.Outstanding_amount
+                  ? `LKR ${Number(item.Outstanding_amount).toLocaleString()}`
+                  : "";
+                break;
+            }
+
+            if (text) {
+              if (colIndex === 4 || colIndex === 5) {
+                doc.text(text, x + col.width - 2, y + 6, { align: "right" });
+              } else {
+                doc.text(text, x + 2, y + 6);
+              }
+            }
+          }
+
+          // Draw dotted lines and checkboxes for all rows (empty and filled)
+          if ([6, 8, 10, 12].includes(colIndex)) {
+            // Draw dotted line for date columns
+            for (let i = 2; i < col.width - 2; i += 2) {
+              doc.line(x + i, y + rowHeight - 2, x + i + 1, y + rowHeight - 2);
+            }
+          } else if ([7, 9, 11, 13].includes(colIndex)) {
+            // Draw checkbox for attendance columns
+            doc.rect(x + 3, y + 2, 6, 6, "S");
+          }
+
+          x += col.width;
+        });
+
+        y += rowHeight;
+      });
+
+      // Add page totals
+      const totals = calculatePageTotals(pageIndex);
+      doc.setFontSize(10);
+      doc.setFont(undefined, "bold");
+
+      const totalY = y + 10;
+      doc.text(
+        `Page Total Loan Amount: LKR ${totals.totalLoanAmount.toLocaleString()}`,
+        pageWidth - margin - 80,
+        totalY
+      );
+      doc.text(
+        `Page Total Outstanding: LKR ${totals.totalOutstanding.toLocaleString()}`,
+        pageWidth - margin - 80,
+        totalY + 7
+      );
+    }
+
+    // Save the PDF
+    doc.save("loan-report.pdf");
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white w-[95%] max-w-6xl h-[90vh] rounded-lg shadow-xl overflow-hidden flex flex-col">
@@ -211,7 +367,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            {/* Add Filter Buttons */}
+            {/* Filter Buttons */}
             <div className="flex rounded-md shadow-sm">
               <button
                 onClick={() => setFilter("all")}
@@ -246,6 +402,13 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
             </div>
             <div className="flex gap-2">
               <button
+                onClick={generatePDF}
+                className="flex items-center px-3 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
+              </button>
+              {/* <button
                 onClick={handlePrint}
                 className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
               >
@@ -258,7 +421,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
               >
                 <X className="h-4 w-4 mr-2" />
                 Close
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
@@ -274,7 +437,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
           </div>
         </div>
 
-        {/* Update print styles */}
+        {/* Print styles */}
         <style jsx global>{`
           @page {
             size: A4 landscape;
@@ -284,8 +447,8 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
           @media print {
             html,
             body {
-              width: 297mm; /* A4 width in landscape */
-              height: 210mm; /* A4 height in landscape */
+              width: 297mm;
+              height: 210mm;
               margin: 0;
               padding: 0;
             }
@@ -335,13 +498,11 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
               border: 1px solid #000 !important;
             }
 
-            /* Make the header text smaller */
             h2.text-2xl {
               font-size: 14pt !important;
               margin-bottom: 4px !important;
             }
 
-            /* Format the summary section */
             .border-t.bg-gray-50 {
               position: fixed !important;
               bottom: 15mm !important;
@@ -351,12 +512,10 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
               border: none !important;
             }
 
-            /* Hide the showing X loans text */
             .text-sm.text-gray-600 {
               display: none !important;
             }
 
-            /* Make sure everything is visible */
             .bg-white,
             .bg-white *,
             .border-t.bg-gray-50,
@@ -367,7 +526,6 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
               print-color-adjust: exact !important;
             }
 
-            /* Format dotted lines and checkboxes */
             .border-b.border-dotted {
               border-bottom: 1px dotted #000 !important;
               min-height: 20px !important;
@@ -379,7 +537,6 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
               min-height: 16px !important;
             }
 
-            /* Ensure currency amounts are readable */
             .text-right,
             .font-bold.text-lg {
               white-space: nowrap !important;
@@ -405,7 +562,6 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
               page-break-inside: avoid !important;
             }
 
-            /* Show all content when printing */
             .bg-white,
             .bg-white *,
             .print-page,
