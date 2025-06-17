@@ -286,6 +286,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                   <TableHead>Loan Type</TableHead>
                   <TableHead>Payment Mode</TableHead>
                   <TableHead>Total Amount</TableHead>
+                  <TableHead>Interest Rate</TableHead>
                   {filters.paymentMode === "group" && (
                     <TableHead>Group Total</TableHead>
                   )}
@@ -332,6 +333,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                             : payment.loanTypeMode}
                         </span>
                       </TableCell>
+
                       <TableCell>
                         LKR {Number(payment.Totalpay).toLocaleString()}
                       </TableCell>
@@ -342,6 +344,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                             "0"}
                         </TableCell>
                       )}
+                      <TableCell>{payment.rate}%</TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${

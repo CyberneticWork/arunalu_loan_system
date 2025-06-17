@@ -16,6 +16,7 @@ export async function GET() {
         lb.Totalpay,
         lb.status,
         lb.group_name, 
+        lb.rate,
         c.fullname as customerName,
         c.gs,
         c.ds,
@@ -43,7 +44,7 @@ export async function GET() {
       data: rows.map((row) => ({
         ...row,
         loanType: row.formattedLoanType,
-        remainingAmount: Number(row.remainingAmount || row.Totalpay)
+        remainingAmount: Number(row.remainingAmount || row.Totalpay),
       })),
     });
   } catch (error) {
