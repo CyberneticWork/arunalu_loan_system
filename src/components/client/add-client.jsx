@@ -62,7 +62,8 @@ export function AddClient({ onSubmit, onCancel, initialNIC }) {
     }
     return age >= 18;
   };
-  const validateGSDiv = (val) => /^[A-Z0-9]{3,6}$/.test(val);
+  // GS Division must contain at least one letter and one number
+  const validateGSDiv = (val) => /[A-Za-z]/.test(val) && /\d/.test(val);
   const validateDSOffice = (val) => /^[A-Za-z ]+$/.test(val);
   const validateRelationName = (name) => /^[A-Za-z ]+$/.test(name);
   const validateRelationAddress = (address) => address && address.length > 0;
@@ -143,10 +144,9 @@ export function AddClient({ onSubmit, onCancel, initialNIC }) {
       if (!validateDOB(formData.dob))
         newErrors.dob = "Must be at least 18 years old.";
       if (!formData.address1) newErrors.address1 = "Address is required.";
-      // if (!["JE", "NG"].includes(formData.location))
-      //   newErrors.location = "Location must be JE or NG.";
+      if (!formData.location) newErrors.location = "Branch is required.";
       if (!validateGSDiv(formData.gsDivision))
-        newErrors.gsDivision = "GS Division: 3-6 uppercase letters/numbers.";
+        newErrors.gsDivision = "Center is required";
       if (!validateDSOffice(formData.dsOffice))
         newErrors.dsOffice = "DS Office: letters only.";
       if (!formData.district) newErrors.district = "District is required.";
@@ -561,7 +561,7 @@ export function AddClient({ onSubmit, onCancel, initialNIC }) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="location" className="text-sm font-medium">
-                Location <span className="text-red-500">*</span>
+                Branch <span className="text-red-500">*</span>
               </Label>
               <Select
                 value={formData.location}
@@ -573,7 +573,7 @@ export function AddClient({ onSubmit, onCancel, initialNIC }) {
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
+                    <SelectItem key={branch.id} value={branch.shortcode}>
                       {branch.branch}
                     </SelectItem>
                   ))}
@@ -623,13 +623,13 @@ export function AddClient({ onSubmit, onCancel, initialNIC }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="gsDivision" className="text-sm font-medium">
-                GS Division <span className="text-red-500">*</span>
+                Center <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="gsDivision"
                 value={formData.gsDivision}
                 onChange={(e) => handleChange("gsDivision", e.target.value)}
-                placeholder="e.g. 70B"
+                placeholder="e.g. katana-10"
                 required
                 disabled={clientExists && customerStatus !== "draft"}
               />

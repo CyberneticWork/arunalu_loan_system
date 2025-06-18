@@ -4,12 +4,15 @@ export async function GET() {
   let connection;
   try {
     connection = await connectDB();
-    const [rows] = await connection.execute("SELECT id, branch FROM branches");
+    const [rows] = await connection.execute(
+      "SELECT id, branch, shortcode FROM branches"
+    );
     return Response.json({
       code: "SUCCESS",
       data: rows.map((row) => ({
         id: row.id,
         branch: row.branch,
+        shortcode: row.shortcode,
       })),
     });
   } catch (error) {
