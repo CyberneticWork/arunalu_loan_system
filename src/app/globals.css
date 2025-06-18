@@ -86,6 +86,39 @@
   --sidebar-ring: oklch(0.57 0.19 255); /* Updated sidebar-ring to match primary */
 }
 
+/* Add these styles */
+html, body {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Add this class for the main layout wrapper */
+.layout-wrapper {
+  min-height: 100vh;
+  display: flex;
+}
+
+.shadow-glow {
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.sidebar {
+  background: linear-gradient(to bottom, #1e293b, #0f172a);
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes gentle-pulse {
+  0% { opacity: 0.8; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+.animate-gentle {
+  animation: gentle-pulse 2s ease-in-out infinite;
+}
+
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0); /* Keep light color text in dark mode for contrast */

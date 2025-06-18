@@ -53,29 +53,44 @@ export async function POST(request) {
         ]
       );
 
-      // 3. Get the update_spouse record
-      const [updateSpouse] = await db.execute(
+      // 3. Get the update_spouse record (by customers or by NIC)
+      let [updateSpouse] = await db.execute(
         'SELECT * FROM update_spouse WHERE customers = ?',
         [id]
       );
+      if (!updateSpouse[0]) {
+        // fallback: find by NIC
+        [updateSpouse] = await db.execute(
+          'SELECT * FROM update_spouse WHERE nic = ?',
+          [updateCustomer[0].nic]
+        );
+      }
 
       if (updateSpouse[0]) {
-        // 4. Update spouse table with new data
-        await db.execute(
-          'UPDATE spouse SET ' +
-          'nic = ?, name = ?, address = ?, telno = ?, relation = ?, ' +
-          'editby = ?, editat = CURRENT_TIMESTAMP ' +
-          'WHERE customers = ?',
-          [
-            updateSpouse[0].nic,
-            updateSpouse[0].name,
-            updateSpouse[0].address,
-            updateSpouse[0].telno,
-            updateSpouse[0].relation,
-            'admin',
-            updateSpouse[0].customers
-          ]
+        // Find the actual customer id for spouse table update
+        const [customerRow] = await db.execute(
+          'SELECT id FROM customer WHERE nic = ?',
+          [updateCustomer[0].nic]
         );
+        const customerId = customerRow[0]?.id;
+        if (customerId) {
+          // 4. Update spouse table with new data (by customers = customerId)
+          await db.execute(
+            'UPDATE spouse SET ' +
+            'nic = ?, name = ?, address = ?, telno = ?, relation = ?, ' +
+            'editby = ?, editat = CURRENT_TIMESTAMP ' +
+            'WHERE customers = ?',
+            [
+              updateSpouse[0].nic,
+              updateSpouse[0].name,
+              updateSpouse[0].address,
+              updateSpouse[0].telno,
+              updateSpouse[0].relation,
+              'admin',
+              customerId
+            ]
+          );
+        }
       }
 
       // 5. Update update_customer status to Approved

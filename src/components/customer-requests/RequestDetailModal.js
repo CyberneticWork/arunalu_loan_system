@@ -143,8 +143,8 @@ export default function RequestDetailModal({
           <TabsContent value="spouse" className="mt-4">
             <DataComparison
               title="Spouse Information"
-              current={currentSpouseData}
-              pending={pendingSpouseData}
+              current={currentSpouseData || {}}
+              pending={pendingSpouseData || {}}
               fields={spouseFields}
             />
           </TabsContent>
