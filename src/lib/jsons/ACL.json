@@ -102,6 +102,13 @@
         "icon": "UserPlus"
       },
       {
+        "id": 6,
+        "name": "Add New Branch",
+        "route": "/admin/add-branch",
+        "icon": "Home"
+
+      },
+      {
         "id": 4,
         "name": "Update",
         "route": "/admin/user",
