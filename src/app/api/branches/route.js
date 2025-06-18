@@ -4,21 +4,22 @@ export async function GET() {
   let connection;
   try {
     connection = await connectDB();
-    
-    const [rows] = await connection.execute(
-      "SELECT id, branch, shortcode FROM branches"
-    );
-
+    const [rows] = await connection.execute("SELECT id, branch FROM branches");
     return Response.json({
       code: "SUCCESS",
-      data: rows
+      data: rows.map((row) => ({
+        id: row.id,
+        branch: row.branch,
+      })),
     });
   } catch (error) {
-    console.error("Error fetching branches:", error);
-    return Response.json({
-      code: "ERROR",
-      message: "Failed to fetch branches"
-    }, { status: 500 });
+    return Response.json(
+      {
+        code: "ERROR",
+        message: "Failed to fetch branches",
+      },
+      { status: 500 }
+    );
   } finally {
     if (connection) {
       try {

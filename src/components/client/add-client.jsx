@@ -143,8 +143,8 @@ export function AddClient({ onSubmit, onCancel, initialNIC }) {
       if (!validateDOB(formData.dob))
         newErrors.dob = "Must be at least 18 years old.";
       if (!formData.address1) newErrors.address1 = "Address is required.";
-      if (!["JE", "NG"].includes(formData.location))
-        newErrors.location = "Location must be JE or NG.";
+      // if (!["JE", "NG"].includes(formData.location))
+      //   newErrors.location = "Location must be JE or NG.";
       if (!validateGSDiv(formData.gsDivision))
         newErrors.gsDivision = "GS Division: 3-6 uppercase letters/numbers.";
       if (!validateDSOffice(formData.dsOffice))
@@ -434,6 +434,24 @@ export function AddClient({ onSubmit, onCancel, initialNIC }) {
       </div>
     );
   };
+  const [branches, setBranches] = useState([]);
+
+  // Add useEffect to fetch branches when component mounts
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const res = await fetch("/api/branches");
+        const data = await res.json();
+        if (data.code === "SUCCESS") {
+          setBranches(data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching branches:", error);
+      }
+    };
+
+    fetchBranches();
+  }, []);
 
   const renderPersonalDetails = () => {
     return (
@@ -554,8 +572,11 @@ export function AddClient({ onSubmit, onCancel, initialNIC }) {
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="JE">JE</SelectItem>
-                  <SelectItem value="NG">NG</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      {branch.branch}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {errors.location && (
