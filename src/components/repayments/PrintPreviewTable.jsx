@@ -157,6 +157,23 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 ))}
               </tr>
             ))}
+
+            {/* Total row at the end */}
+            <tr className="h-[52px] font-bold bg-gray-50">
+              <td className="border border-gray-200 px-4 py-3">Total</td>
+              <td className="border border-gray-200 px-4 py-3"></td>
+              <td className="border border-gray-200 px-4 py-3"></td>
+              <td className="border border-gray-200 px-4 py-3"></td>
+              <td className="border border-gray-200 px-4 py-3"></td>
+              <td className="border border-gray-200 px-4 py-3"></td>
+              {/* Empty cells for dates and attendance */}
+              {[1, 2, 3, 4].map((num) => (
+                <React.Fragment key={`total-attendance-${num}`}>
+                  <td className="border border-gray-200 px-4 py-3"></td>
+                  <td className="border border-gray-200 px-4 py-3"></td>
+                </React.Fragment>
+              ))}
+            </tr>
           </tbody>
         </table>
         <div className="page-totals">
@@ -332,6 +349,29 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
 
         y += rowHeight;
       });
+
+      // Add total row
+      x = margin;
+      const totalRowHeight = 10;
+      doc.setFillColor(245, 245, 245);
+
+      // Draw total row background and borders
+      columns.forEach((col, colIndex) => {
+        if (colIndex === 0) {
+          // Set font for the "Total" cell
+          doc.setFontSize(9);
+          doc.setFont(undefined, "bold");
+          doc.setFillColor(245, 245, 245);
+          doc.rect(x, y, col.width, totalRowHeight, "FD");
+          doc.text("Total", x + 2, y + 6);
+        } else {
+          // Empty cells for the rest of the columns
+          doc.setFillColor(245, 245, 245);
+          doc.rect(x, y, col.width, totalRowHeight, "FD");
+        }
+        x += col.width;
+      });
+      y += totalRowHeight;
 
       // Add page totals
       const totals = calculatePageTotals(pageIndex);
