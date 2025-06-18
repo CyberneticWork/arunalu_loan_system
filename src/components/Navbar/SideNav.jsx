@@ -387,9 +387,10 @@ export default function Sidebar() {
       {/* Sidebar Component */}
       <div 
         className={`sidebar fixed lg:static bg-slate-800 shadow-lg z-40 flex flex-col
-                  transition-all duration-300 ease-in-out h-full border-r-2 border-slate-700
-                  ${isMobile ? 'w-72 pt-6 mt-16' : collapsed ? 'w-20' : 'w-72 pt-0 mt-0'}
-                  ${sidebarOpen ? 'left-0' : '-left-80 lg:left-0'}`}
+                    transition-all duration-300 ease-in-out h-screen border-r-2 border-slate-700
+                    ${isMobile ? 'w-72 pt-6 mt-16' : collapsed ? 'w-20' : 'w-72 pt-0 mt-0'}
+                    ${sidebarOpen ? 'left-0' : '-left-80 lg:left-0'}
+                    ${isMobile ? 'h-[calc(100vh-4rem)]' : 'h-screen'}`}
       >
         {/* Desktop Logo Area with White Square - Hidden on Mobile */}
         <div className={`${isMobile ? 'hidden' : 'flex'} items-center ${collapsed ? 'justify-center' : 'justify-center'} px-4 py-6 border-b border-slate-700 flex-shrink-0`}>
@@ -521,7 +522,7 @@ export default function Sidebar() {
         <div className="px-3 py-4 border-t border-slate-700 flex-shrink-0">
           <Button 
             variant="ghost" 
-            className={`w-full h-11 px-4 flex ${collapsed ? 'justify-center' : 'justify-between'} items-center text-red-300 transition-transform group hover:-translate-y-1 duration-300 hover:bg-white/5`}
+            className={`w-full h-11 px-4 flex ${collapsed ? 'justify-center' : 'justify-between'} items-center text-red-400 transition-transform group hover:-translate-y-1 duration-300 hover:bg-white/5 hover:text-red-200 rounded-lg`}
             onClick={handleLogout}
             disabled={isLoggingOut}
           >
@@ -570,7 +571,7 @@ export default function Sidebar() {
   );
 }
 
-// NavItem component - Slate theme with light blue accents and hover animation
+// Update the NavItem component with improved styling
 function NavItem({ 
   icon, 
   label, 
@@ -585,61 +586,95 @@ function NavItem({
   isMobile = false
 }) {
   const badgeColorClasses = {
-    amber: "bg-amber-900/30 text-amber-300",
-    blue: "bg-blue-900/30 text-blue-300",
-    emerald: "bg-emerald-900/30 text-emerald-300",
-    purple: "bg-purple-900/30 text-purple-300",
-    indigo: "bg-indigo-900/30 text-indigo-300",
+    amber: "bg-amber-500/20 text-amber-400",
+    blue: "bg-blue-500/20 text-blue-400",
+    emerald: "bg-emerald-500/20 text-emerald-400",
+    purple: "bg-purple-500/20 text-purple-400",
+    indigo: "bg-indigo-500/20 text-indigo-400",
   };
   
-  // Updated to keep text light on hover
   const activeStyle = isActive 
-    ? "bg-blue-800/10 text-blue-300 font-medium"
-    : "hover:bg-white/5 text-slate-300 hover:text-slate-200";
+    ? "bg-gradient-to-r from-blue-600/20 to-blue-500/10 text-blue-300 font-medium border-r-2 border-blue-400"
+    : "hover:bg-slate-700/50 text-slate-300 hover:text-slate-200";
     
   return (
     <Button 
       variant="ghost" 
-      className={`w-full ${isSubmenu ? 'h-9 text-sm' : 'h-11'} px-3 flex ${collapsed ? 'justify-center' : 'justify-between'} items-center mb-1 
-      ${activeStyle} group hover:-translate-y-0.5 transition-transform duration-300 ease-in-out`}
+      className={`
+        w-full 
+        ${isSubmenu ? 'h-9 text-sm' : 'h-11'} 
+        px-3 
+        flex 
+        ${collapsed ? 'justify-center' : 'justify-between'} 
+        items-center 
+        mb-1 
+        ${activeStyle} 
+        group 
+        hover:-translate-y-0.5 
+        transform-gpu 
+        transition-all 
+        duration-200 
+        ease-out
+        rounded-lg
+        ${isSubmenu ? 'opacity-80 hover:opacity-100' : ''}
+      `}
       onClick={onClick}
     >
       <div className={`flex items-center ${collapsed ? 'justify-center' : ''}`}>
-        <div className={`${isActive ? 'text-blue-300' : 'text-slate-400 group-hover:text-slate-200'}`}>
+        <div className={`
+          ${isActive ? 'text-blue-300' : 'text-slate-400 group-hover:text-slate-200'}
+          transition-transform duration-200 group-hover:scale-110
+        `}>
           {icon}
         </div>
         {!collapsed && (
-          <span className="ml-3">
+          <span className="ml-3 font-medium tracking-wide">
             {label}
           </span>
         )}
       </div>
       
       {!collapsed && (
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           {badge && (
-            <span className={`text-xs px-2 py-0.5 rounded-full mr-2 ${badgeColorClasses[badgeColor]} font-semibold`}>
+            <span className={`
+              text-xs 
+              px-2.5 
+              py-0.5 
+              rounded-full 
+              ${badgeColorClasses[badgeColor]} 
+              font-semibold
+              shadow-glow
+              animate-pulse
+            `}>
               {badge}
             </span>
           )}
           {hasSubmenu && (
-            <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${
-              isExpanded 
-                ? "rotate-90 text-slate-200" 
-                : "text-slate-400 group-hover:text-slate-200"
-            }`} />
+            <ChevronRight className={`
+              w-4 
+              h-4 
+              transition-all 
+              duration-200 
+              ${isExpanded ? "rotate-90 text-blue-300" : "text-slate-400 group-hover:text-slate-200"}
+              group-hover:translate-x-0.5
+            `} />
           )}
         </div>
       )}
       
-      {/* Show badge as a dot when collapsed */}
       {collapsed && badge && (
-        <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${
-          badgeColor === "amber" ? "bg-amber-400" : 
-          badgeColor === "purple" ? "bg-purple-400" :
-          badgeColor === "emerald" ? "bg-emerald-400" :
-          badgeColor === "indigo" ? "bg-indigo-400" : "bg-blue-400"
-        }`}></div>
+        <div className={`
+          absolute 
+          top-1 
+          right-1 
+          w-2 
+          h-2 
+          rounded-full 
+          shadow-glow
+          animate-pulse
+          ${badgeColorClasses[badgeColor].split(' ')[1]}
+        `}></div>
       )}
     </Button>
   );
