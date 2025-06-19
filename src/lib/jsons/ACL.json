@@ -90,6 +90,12 @@
     "icon": "Wallet"
   },
   {
+    "id": 19,
+    "name": "Cashbook",
+    "route": "/cashbook",
+    "icon": "Wallet"
+  },
+  {
     "id": 2,
     "name": "Admins",
     "route": "/admin",
@@ -106,7 +112,6 @@
         "name": "Add New Branch",
         "route": "/admin/add-branch",
         "icon": "Home"
-
       },
       {
         "id": 4,

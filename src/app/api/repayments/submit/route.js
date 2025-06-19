@@ -29,10 +29,9 @@ export async function POST(request) {
 
       // Calculate remaining amount
       const remainingAmount = (
-        parseFloat(payment.fullLoanAmount) - 
-        parseFloat(totalPaidAmount)
+        parseFloat(payment.fullLoanAmount) - parseFloat(totalPaidAmount)
       ).toFixed(2);
-      
+
       const status = parseFloat(remainingAmount) <= 0 ? "completed" : "pending";
 
       // Insert the payment record
@@ -55,7 +54,7 @@ export async function POST(request) {
           newPaidAmount.toFixed(2),
           payment.paymentMethod,
           remainingAmount,
-          status
+          status,
         ]
       );
 
@@ -75,9 +74,30 @@ export async function POST(request) {
         [result.insertId]
       );
 
+      const transactionId = transactionResult[0].transactionId;
+
+      // Add transaction to cashbook
+      await connection.execute(
+        `INSERT INTO cashbook (
+          description,
+          type,
+          amount,
+          category,
+          method,
+          created_at
+        ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP())`,
+        [
+          `Loan Repayment - ${transactionId}`,
+          "income",
+          newPaidAmount.toFixed(2),
+          "Loan Repayment",
+          payment.paymentMethod.toLowerCase(), // Convert to lowercase to match 'cash' or 'bank'
+        ]
+      );
+
       results.push({
         success: true,
-        transactionId: transactionResult[0].transactionId,
+        transactionId: transactionId,
         paymentId: result.insertId,
         remainingAmount,
         status,
