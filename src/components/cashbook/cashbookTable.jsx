@@ -118,15 +118,20 @@ const Cashbook = () => {
   // Pagination logic
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentTransactions = transactions.slice(indexOfFirstRow, indexOfLastRow);
+  const currentTransactions = transactions.slice(
+    indexOfFirstRow,
+    indexOfLastRow
+  );
   const totalPages = Math.ceil(transactions.length / rowsPerPage);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const goToFirstPage = () => setCurrentPage(1);
   const goToLastPage = () => setCurrentPage(totalPages);
-  const goToPreviousPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
-  const goToNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  const goToPreviousPage = () =>
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const goToNextPage = () =>
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
   const handleSubmit = async () => {
     if (
@@ -722,7 +727,9 @@ const Cashbook = () => {
                 {/* Pagination Controls */}
                 <div className="px-6 py-4 bg-white border-t border-gray-200 flex items-center justify-between">
                   <div className="text-sm text-gray-500">
-                    Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, transactions.length)} of {transactions.length} transactions
+                    Showing {indexOfFirstRow + 1} to{" "}
+                    {Math.min(indexOfLastRow, transactions.length)} of{" "}
+                    {transactions.length} transactions
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
