@@ -29,10 +29,9 @@ export async function POST(request) {
 
       // Calculate remaining amount
       const remainingAmount = (
-        parseFloat(payment.fullLoanAmount) - 
-        parseFloat(totalPaidAmount)
+        parseFloat(payment.fullLoanAmount) - parseFloat(totalPaidAmount)
       ).toFixed(2);
-      
+
       const status = parseFloat(remainingAmount) <= 0 ? "completed" : "pending";
 
       // Insert the payment record
@@ -55,7 +54,7 @@ export async function POST(request) {
           newPaidAmount.toFixed(2),
           payment.paymentMethod,
           remainingAmount,
-          status
+          status,
         ]
       );
 
@@ -74,9 +73,9 @@ export async function POST(request) {
         "SELECT transactionId FROM repayment WHERE id = ?",
         [result.insertId]
       );
-      
+
       const transactionId = transactionResult[0].transactionId;
-      
+
       // Add transaction to cashbook
       await connection.execute(
         `INSERT INTO cashbook (

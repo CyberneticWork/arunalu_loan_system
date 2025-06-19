@@ -9,7 +9,7 @@ export async function GET() {
     try {
       // Get loan data from multiple tables - joining auto_loan_applications and loan_bussiness tables
       // const [autoLoanResults] = await connection.execute(`
-      //   SELECT 
+      //   SELECT
       //     a.id,
       //     c.fullname as customerName,
       //     a.contractid,
@@ -47,28 +47,30 @@ export async function GET() {
       //   contractId: loan.contractid || `CT-${4590 + parseInt(loan.id)}`,
       //   croName: loan.croName || "Unassigned",
       //   revenueAmount: `LKR ${Number(loan.revenueAmount).toLocaleString()}`,
-      //   status: loan.status === "fund waiting" ? "Waiting for Funds" : 
+      //   status: loan.status === "fund waiting" ? "Waiting for Funds" :
       //           loan.status.charAt(0).toUpperCase() + loan.status.slice(1),
       //   loanType: "Auto Loan",
       //   applicationDate: loan.applicationDate
       // }));
 
       // Format business loans
-      const formattedBusinessLoans = businessLoanResults.map(loan => ({
+      const formattedBusinessLoans = businessLoanResults.map((loan) => ({
         id: `B-${loan.id}`,
         customerName: loan.customerName,
         contractId: loan.contractid || `CT-${4590 + parseInt(loan.id)}`,
         croName: loan.croName || "Unassigned",
         revenueAmount: `LKR ${Number(loan.revenueAmount).toLocaleString()}`,
-        status: loan.status === "fund waiting" ? "Waiting for Funds" : 
-                loan.status.charAt(0).toUpperCase() + loan.status.slice(1),
+        status:
+          loan.status === "fund waiting"
+            ? "Waiting for Funds"
+            : loan.status.charAt(0).toUpperCase() + loan.status.slice(1),
         loanType: loan.loanType,
-        applicationDate: loan.applicationDate
+        applicationDate: loan.applicationDate,
       }));
 
       // Combine all loan types
       const allLoans = [...formattedBusinessLoans];
-      
+
       // Sort by most recent date
       allLoans.sort((a, b) => {
         const dateA = new Date(a.applicationDate);
@@ -76,18 +78,18 @@ export async function GET() {
         return dateB - dateA;
       });
 
-      return new Response(
-        JSON.stringify({ success: true, data: allLoans }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: true, data: allLoans }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     } finally {
       await connection.end();
     }
   } catch (error) {
     console.error("Error fetching loan approval data:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
