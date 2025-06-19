@@ -89,11 +89,11 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    function addOneDay(dateString) {
-      const date = new Date(dateString);
-      date.setDate(date.getDate() + 1);
-      return date.toISOString().split("T")[0];
-    }
+    // function addOneDay(dateString) {
+    //   const date = new Date(dateString);
+    //   date.setDate(date.getDate() + 1);
+    //   return date.toISOString().split("T")[0];
+    // }
 
     connection = await connectDB();
     console.log("Connected to DB");
@@ -112,7 +112,8 @@ export async function POST(req) {
           prefix,
           fullname,
           gender,
-          addOneDay(dob),
+          // addOneDay(dob),
+          dob,
           location,
           address,
           telno,
