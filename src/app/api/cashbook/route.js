@@ -1,10 +1,44 @@
 import { connectDB } from "@/lib/db";
 
-export async function GET() {
+export async function GET(req) {
+  const { searchParams } = new URL(req.url);
+  const action = searchParams.get("action");
+
+  if (!action) {
+    return new Response(JSON.stringify({ error: "Action is required" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
   let connection;
-  try {
-    connection = await connectDB();
-    const [rows] = await connection.execute(`
+  if (action !== "getAll" && action !== "getTodayExpenses") {
+    return new Response(JSON.stringify({ error: "Invalid action specified" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  if (action === "getTodayExpenses") {
+    try {
+      connection = await connectDB();
+      const [rows] = await connection.execute(`
+      SELECT SUM(amount) AS TotalAmount FROM cashbook WHERE type = 'expense' AND DATE(created_at) = CURDATE();
+    `);
+      await connection.end();
+
+      return new Response(JSON.stringify({ code: "SUCCESS", data: rows }), {
+        status: 200,
+      });
+    } catch (error) {
+      if (connection) await connection.end();
+      return new Response(
+        JSON.stringify({ code: "ERROR", message: error.message }),
+        { status: 500 }
+      );
+    }
+  } else {
+    try {
+      connection = await connectDB();
+      const [rows] = await connection.execute(`
       SELECT 
         id, 
         description, 
@@ -16,20 +50,20 @@ export async function GET() {
       FROM cashbook 
       ORDER BY created_at DESC
     `);
-    await connection.end();
+      await connection.end();
 
-    return new Response(JSON.stringify({ code: "SUCCESS", data: rows }), {
-      status: 200,
-    });
-  } catch (error) {
-    if (connection) await connection.end();
-    return new Response(
-      JSON.stringify({ code: "ERROR", message: error.message }),
-      { status: 500 }
-    );
+      return new Response(JSON.stringify({ code: "SUCCESS", data: rows }), {
+        status: 200,
+      });
+    } catch (error) {
+      if (connection) await connection.end();
+      return new Response(
+        JSON.stringify({ code: "ERROR", message: error.message }),
+        { status: 500 }
+      );
+    }
   }
 }
-
 export async function POST(req) {
   let connection;
   try {

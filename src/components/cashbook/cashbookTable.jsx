@@ -7,12 +7,16 @@ import {
   TrendingDown,
   ArrowRight,
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 
 const Cashbook = () => {
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [todayExpenses, setTodayExpenses] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [newTransaction, setNewTransaction] = useState({
     date: new Date().toISOString().split("T")[0],
@@ -22,6 +26,10 @@ const Cashbook = () => {
     category: "",
     method: "cash",
   });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage] = useState(10);
 
   const [showDepositForm, setShowDepositForm] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
@@ -38,12 +46,13 @@ const Cashbook = () => {
   // Fetch transactions on component mount
   useEffect(() => {
     fetchTransactions();
+    fetchTodayExpenses();
   }, []);
 
   const fetchTransactions = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/cashbook");
+      const response = await fetch("/api/cashbook?action=getAll");
       const result = await response.json();
 
       if (result.code === "SUCCESS") {
@@ -62,6 +71,24 @@ const Cashbook = () => {
       alert("Error loading transactions. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  //fetch today expenses
+  const fetchTodayExpenses = async () => {
+    try {
+      const response = await fetch("/api/cashbook?action=getTodayExpenses");
+      const result = await response.json();
+
+      if (result.code === "SUCCESS") {
+        setTodayExpenses(result.data[0].TotalAmount || 0);
+      } else {
+        console.error("Failed to fetch today's expenses:", result.message);
+        alert("Failed to load today's expenses. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error fetching today's expenses:", error);
+      alert("Error loading today's expenses. Please try again.");
     }
   };
 
@@ -87,6 +114,19 @@ const Cashbook = () => {
   }, 0);
 
   const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
+
+  // Pagination logic
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentTransactions = transactions.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages = Math.ceil(transactions.length / rowsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  const goToFirstPage = () => setCurrentPage(1);
+  const goToLastPage = () => setCurrentPage(totalPages);
+  const goToPreviousPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const goToNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
   const handleSubmit = async () => {
     if (
@@ -280,7 +320,7 @@ const Cashbook = () => {
     return new Intl.NumberFormat("en-LK", {
       style: "currency",
       currency: "LKR",
-    }).format(amount);
+    }).format(amount || 0);
   };
 
   return (
@@ -340,10 +380,10 @@ const Cashbook = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">
-                  Total Expenses
+                  Today Total Expenses
                 </p>
                 <p className="text-2xl font-bold text-red-600">
-                  {formatCurrency(totalExpenses)}
+                  {formatCurrency(todayExpenses)}
                 </p>
               </div>
               <div className="p-3 bg-red-100 rounded-full">
@@ -586,97 +626,155 @@ const Cashbook = () => {
                 No transactions found. Add a transaction to get started.
               </div>
             ) : (
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Method
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {transactions.map((transaction) => (
-                    <tr key={transaction.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(transaction.date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {transaction.description}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+              <>
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Category
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Method
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Amount
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {currentTransactions.map((transaction) => (
+                      <tr key={transaction.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {transaction.description}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              transaction.type === "income" ||
+                              (transaction.type === "withdrawal" &&
+                                transaction.method === "bank") ||
+                              (transaction.type === "withdrawal" &&
+                                transaction.method === "cash")
+                                ? "bg-green-100 text-green-800"
+                                : transaction.type === "expense" ||
+                                  (transaction.type === "deposit" &&
+                                    transaction.method === "cash") ||
+                                  (transaction.type === "deposit" &&
+                                    transaction.method === "bank")
+                                ? "bg-red-100 text-red-800"
+                                : "bg-purple-100 text-purple-800"
+                            }`}
+                          >
+                            {transaction.type}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {transaction.category}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              transaction.method === "cash"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-blue-100 text-blue-800"
+                            }`}
+                          >
+                            {transaction.method}
+                          </span>
+                        </td>
+                        <td
+                          className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
                             transaction.type === "income" ||
                             (transaction.type === "withdrawal" &&
                               transaction.method === "bank") ||
                             (transaction.type === "withdrawal" &&
                               transaction.method === "cash")
-                              ? "bg-green-100 text-green-800"
-                              : transaction.type === "expense" ||
-                                (transaction.type === "deposit" &&
-                                  transaction.method === "cash") ||
-                                (transaction.type === "deposit" &&
-                                  transaction.method === "bank")
-                              ? "bg-red-100 text-red-800"
-                              : "bg-purple-100 text-purple-800"
+                              ? "text-green-600"
+                              : "text-red-600"
                           }`}
                         >
-                          {transaction.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {transaction.category}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            transaction.method === "cash"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-blue-100 text-blue-800"
-                          }`}
-                        >
-                          {transaction.method}
-                        </span>
-                      </td>
-                      <td
-                        className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
-                          transaction.type === "income" ||
+                          {transaction.type === "income" ||
                           (transaction.type === "withdrawal" &&
                             transaction.method === "bank") ||
                           (transaction.type === "withdrawal" &&
                             transaction.method === "cash")
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {transaction.type === "income" ||
-                        (transaction.type === "withdrawal" &&
-                          transaction.method === "bank") ||
-                        (transaction.type === "withdrawal" &&
-                          transaction.method === "cash")
-                          ? "+"
-                          : "-"}
-                        {formatCurrency(transaction.amount)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            ? "+"
+                            : "-"}
+                          {formatCurrency(transaction.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Pagination Controls */}
+                <div className="px-6 py-4 bg-white border-t border-gray-200 flex items-center justify-between">
+                  <div className="text-sm text-gray-500">
+                    Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, transactions.length)} of {transactions.length} transactions
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={goToFirstPage}
+                      disabled={currentPage === 1}
+                      className={`p-2 rounded-md ${
+                        currentPage === 1
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={goToPreviousPage}
+                      disabled={currentPage === 1}
+                      className={`p-2 rounded-md ${
+                        currentPage === 1
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <div className="text-sm text-gray-700">
+                      Page {currentPage} of {totalPages}
+                    </div>
+                    <button
+                      onClick={goToNextPage}
+                      disabled={currentPage === totalPages}
+                      className={`p-2 rounded-md ${
+                        currentPage === totalPages
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={goToLastPage}
+                      disabled={currentPage === totalPages}
+                      className={`p-2 rounded-md ${
+                        currentPage === totalPages
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
