@@ -12,18 +12,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { 
-  Loader2, 
-  User, 
-  BadgeCheck, 
-  X, 
-  Mail, 
-  Phone, 
-  Building2, 
-  Lock, 
-  UserPlus, 
-  CheckCircle2, 
-  AlertCircle 
+import {
+  Loader2,
+  User,
+  BadgeCheck,
+  X,
+  Mail,
+  Phone,
+  Building2,
+  Lock,
+  UserPlus,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -81,7 +81,7 @@ export default function AddEmployee() {
         })
       });
       const json = await response.json();
-      
+
       if (json.code === "SUCCESS") {
         return json.available;
       } else {
@@ -96,7 +96,7 @@ export default function AddEmployee() {
   const handleUsernameChange = async (e) => {
     const value = e.target.value;
     setFormData(prev => ({ ...prev, username: value }));
-    
+
     if (value.trim()) {
       setUsernameChecking(true);
       const isAvailable = await checkAvailability('username', value);
@@ -111,7 +111,7 @@ export default function AddEmployee() {
   const handleEmpidChange = async (e) => {
     const value = e.target.value;
     setFormData(prev => ({ ...prev, empid: value }));
-    
+
     if (value.trim()) {
       setEmpidChecking(true);
       const isAvailable = await checkAvailability('empid', value);
@@ -226,7 +226,7 @@ export default function AddEmployee() {
           <CardDescription>Fill in the details to add a new employee to the system</CardDescription>
           <Separator />
         </CardHeader>
-        
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {success && (
@@ -238,7 +238,7 @@ export default function AddEmployee() {
                 </AlertDescription>
               </Alert>
             )}
-            
+
             {error && (
               <Alert variant="destructive" className="bg-red-50 border-red-200">
                 <AlertCircle className="h-4 w-4 text-red-600" />
@@ -246,7 +246,7 @@ export default function AddEmployee() {
                 <AlertDescription className="text-red-700">{error}</AlertDescription>
               </Alert>
             )}
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
               {/* Username */}
               <div className="space-y-2">
@@ -414,7 +414,7 @@ export default function AddEmployee() {
                   Branch
                 </Label>
                 <Select
-                  value={formData.branchID}
+                  value={String(formData.branchID)} // Ensure it's a string
                   onValueChange={(value) => setFormData(prev => ({ ...prev, branchID: value }))}
                 >
                   <SelectTrigger id="branch" className="w-full">
@@ -422,7 +422,7 @@ export default function AddEmployee() {
                   </SelectTrigger>
                   <SelectContent>
                     {branches.map(branch => (
-                      <SelectItem key={branch.id} value={branch.id}>
+                      <SelectItem key={branch.id} value={String(branch.id)}>
                         {branch.branch} ({branch.shortcode})
                       </SelectItem>
                     ))}
@@ -453,12 +453,12 @@ export default function AddEmployee() {
             </div>
           </form>
         </CardContent>
-        
+
         <CardFooter className="flex justify-end pt-2 pb-6 px-6 border-t">
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             onClick={handleSubmit}
-            disabled={loading || !usernameAvailable || !empidAvailable} 
+            disabled={loading || !usernameAvailable || !empidAvailable}
             className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
           >
             {loading ? (

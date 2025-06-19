@@ -84,11 +84,32 @@ export async function POST(req) {
     // Generate hash for the employee
     const id = randomUUID();
 
+const hash = bcrypt.hashSync(id, 10);
+
+    let acl = "";
+    if (roll === "admin") {
+      acl = "MSwyLDMsNCw1LDcsOCw5LDEwLDExLDEyLDEzLDE0LDE1LDE4";
+    } 
+
     // Insert the new employee
     await connection.execute(
-      "INSERT INTO employees (username, empid, name, email, roll, pass, tellno, branchID, addby, access) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [username, empid, name, email, roll, hashedPassword, tellno, branchIDInt, addby, 1]
+      "INSERT INTO employees (username, empid, name, email, acl, roll, pass, tellno, branchID, hash, addby, access) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [
+        username,
+        empid,
+        name,
+        email,
+        acl,
+        roll,
+        hashedPassword,
+        tellno,
+        branchIDInt,
+        hash,
+        addby,
+        1,
+      ]
     );
+ 
 
     return Response.json({
       code: "SUCCESS",
