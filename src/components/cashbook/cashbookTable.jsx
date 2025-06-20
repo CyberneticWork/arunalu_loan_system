@@ -36,7 +36,8 @@ const Cashbook = () => {
   const [depositDescription, setDepositDescription] = useState(
     "Cash deposit to bank"
   );
-
+  const [netCash, setNetCash] = useState(0);
+  const [totalbankValue, setTotalbankValue] = useState(0);
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
   const [withdrawalDescription, setWithdrawalDescription] = useState(
@@ -62,6 +63,9 @@ const Cashbook = () => {
             amount: parseFloat(item.amount),
           }))
         );
+        // console.log("Transactions fetched successfully:", result.TotalBank);
+        setNetCash(result.TotalCash);
+        setTotalbankValue(result.TotalBank);
       } else {
         console.error("Failed to fetch transactions:", result.message);
         alert("Failed to load transactions. Please try again.");
@@ -350,7 +354,7 @@ const Cashbook = () => {
                     cashAmount >= 0 ? "text-green-600" : "text-red-600"
                   }`}
                 >
-                  {formatCurrency(cashAmount)}
+                  {formatCurrency(netCash)}
                 </p>
               </div>
               <div className="p-3 bg-green-100 rounded-full">
@@ -371,7 +375,7 @@ const Cashbook = () => {
                     bankValue >= 0 ? "text-blue-600" : "text-red-600"
                   }`}
                 >
-                  {formatCurrency(bankValue)}
+                  {formatCurrency(totalbankValue)}
                 </p>
               </div>
               <div className="p-3 bg-blue-100 rounded-full">

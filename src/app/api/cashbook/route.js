@@ -11,7 +11,11 @@ export async function GET(req) {
     });
   }
   let connection;
-  if (action !== "getAll" && action !== "getTodayExpenses" && action !== "getTotalLoanCash") {
+  if (
+    action !== "getAll" &&
+    action !== "getTodayExpenses" &&
+    action !== "getTotalLoanCash"
+  ) {
     return new Response(JSON.stringify({ error: "Invalid action specified" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
@@ -48,13 +52,59 @@ export async function GET(req) {
         amount, 
         DATE_FORMAT(created_at, '%Y-%m-%d') as date 
       FROM cashbook 
-      ORDER BY created_at DESC
+      ORDER BY created_at DESC;
     `);
+      const [TotalCash] = await connection.execute(`
+      SELECT (
+    SUM(CASE 
+        WHEN (type = 'income' OR type = 'withdrawal') AND method = 'cash' 
+        THEN amount 
+        ELSE 0 
+    END)
+    -
+    SUM(CASE 
+        WHEN type = 'deposit' AND method = 'cash' 
+        THEN amount 
+        ELSE 0 
+    END)
+) AS NetCashAmount
+FROM cashbook;
+
+    `);
+
+      const [TotalBank] = await connection.execute(`
+      SELECT (
+    SUM(CASE 
+        WHEN (type = 'income' OR type = 'withdrawal') AND method = 'bank' 
+        THEN amount 
+        ELSE 0 
+    END)
+    -
+    SUM(CASE 
+        WHEN type = 'deposit' AND method = 'bank' 
+        THEN amount 
+        ELSE 0 
+    END)
+) AS NetBankAmount
+FROM cashbook;
+
+    `);
+      //console log need to show netbank and netcash amount
+      // console.log("eshan", TotalCash[0]);
+      // console.log("eshan", TotalBank[0]);
       await connection.end();
 
-      return new Response(JSON.stringify({ code: "SUCCESS", data: rows }), {
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify({
+          code: "SUCCESS",
+          data: rows,
+          TotalCash: TotalCash[0].NetCashAmount,
+          TotalBank: TotalBank[0].NetBankAmount,
+        }),
+        {
+          status: 200,
+        }
+      );
     } catch (error) {
       if (connection) await connection.end();
       return new Response(
@@ -62,7 +112,7 @@ export async function GET(req) {
         { status: 500 }
       );
     }
-  }else if (action === "getTotalLoanCash") {
+  } else if (action === "getTotalLoanCash") {
     try {
       connection = await connectDB();
       const [rows] = await connection.execute(`
@@ -80,7 +130,6 @@ export async function GET(req) {
         { status: 500 }
       );
     }
-    
   }
 }
 export async function POST(req) {
