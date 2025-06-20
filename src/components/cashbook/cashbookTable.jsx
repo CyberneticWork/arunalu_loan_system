@@ -98,7 +98,7 @@ const Cashbook = () => {
     }
   };
 
-//fetch today expenses
+  //fetch today expenses
   const fetchTotalLoanCash = async () => {
     try {
       const response = await fetch("/api/cashbook?action=getTotalLoanCash");
@@ -127,7 +127,8 @@ const Cashbook = () => {
     if (t.type === "expense") return sum - t.amount;
     if (t.type === "deposit") return sum - t.amount; // Cash out for deposit
     if (t.type === "withdrawal") return sum + t.amount; // Cash in from withdrawal
-    // Do NOT add interest or loan here
+    if (t.type === "loan") return sum - t.amount; // Cash out for loan
+    // Do NOT add interest here
     return sum;
   }, 0);
 
@@ -377,8 +378,9 @@ const Cashbook = () => {
                   Cash Amount
                 </p>
                 <p
-                  className={`text-2xl font-bold ${cashAmount >= 0 ? "text-green-600" : "text-red-600"
-                    }`}
+                  className={`text-2xl font-bold ${
+                    cashAmount >= 0 ? "text-green-600" : "text-red-600"
+                  }`}
                 >
                   {formatCurrency(cashAmount)}
                 </p>
@@ -397,8 +399,9 @@ const Cashbook = () => {
                   Bank Value
                 </p>
                 <p
-                  className={`text-2xl font-bold ${bankValue >= 0 ? "text-blue-600" : "text-red-600"
-                    }`}
+                  className={`text-2xl font-bold ${
+                    bankValue >= 0 ? "text-blue-600" : "text-red-600"
+                  }`}
                 >
                   {formatCurrency(bankValue)}
                 </p>
@@ -450,8 +453,9 @@ const Cashbook = () => {
                   Interest Amount
                 </p>
                 <p
-                  className={`text-2xl font-bold ${interestAmount >= 0 ? "text-green-600" : "text-red-600"
-                    }`}
+                  className={`text-2xl font-bold ${
+                    interestAmount >= 0 ? "text-green-600" : "text-red-600"
+                  }`}
                 >
                   {formatCurrency(interestAmount)}
                 </p>
@@ -461,7 +465,6 @@ const Cashbook = () => {
               </div>
             </div>
           </div>
-
         </div>
 
         {/* Transactions Table */}
@@ -732,20 +735,21 @@ const Cashbook = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${transaction.type === "income" ||
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              transaction.type === "income" ||
                               (transaction.type === "withdrawal" &&
                                 transaction.method === "bank") ||
                               (transaction.type === "withdrawal" &&
                                 transaction.method === "cash")
-                              ? "bg-green-100 text-green-800"
-                              : transaction.type === "expense" ||
-                                (transaction.type === "deposit" &&
-                                  transaction.method === "cash") ||
-                                (transaction.type === "deposit" &&
-                                  transaction.method === "bank")
+                                ? "bg-green-100 text-green-800"
+                                : transaction.type === "expense" ||
+                                  (transaction.type === "deposit" &&
+                                    transaction.method === "cash") ||
+                                  (transaction.type === "deposit" &&
+                                    transaction.method === "bank")
                                 ? "bg-red-100 text-red-800"
                                 : "bg-purple-100 text-purple-800"
-                              }`}
+                            }`}
                           >
                             {transaction.type}
                           </span>
@@ -755,29 +759,31 @@ const Cashbook = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${transaction.method === "cash"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-blue-100 text-blue-800"
-                              }`}
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              transaction.method === "cash"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-blue-100 text-blue-800"
+                            }`}
                           >
                             {transaction.method}
                           </span>
                         </td>
                         <td
-                          className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${transaction.type === "income" ||
+                          className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
+                            transaction.type === "income" ||
                             (transaction.type === "withdrawal" &&
                               transaction.method === "bank") ||
                             (transaction.type === "withdrawal" &&
                               transaction.method === "cash")
-                            ? "text-green-600"
-                            : "text-red-600"
-                            }`}
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
                         >
                           {transaction.type === "income" ||
-                            (transaction.type === "withdrawal" &&
-                              transaction.method === "bank") ||
-                            (transaction.type === "withdrawal" &&
-                              transaction.method === "cash")
+                          (transaction.type === "withdrawal" &&
+                            transaction.method === "bank") ||
+                          (transaction.type === "withdrawal" &&
+                            transaction.method === "cash")
                             ? "+"
                             : "-"}
                           {formatCurrency(transaction.amount)}
@@ -798,20 +804,22 @@ const Cashbook = () => {
                     <button
                       onClick={goToFirstPage}
                       disabled={currentPage === 1}
-                      className={`p-2 rounded-md ${currentPage === 1
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-gray-700 hover:bg-gray-100"
-                        }`}
+                      className={`p-2 rounded-md ${
+                        currentPage === 1
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
                     >
                       <ChevronsLeft className="h-4 w-4" />
                     </button>
                     <button
                       onClick={goToPreviousPage}
                       disabled={currentPage === 1}
-                      className={`p-2 rounded-md ${currentPage === 1
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-gray-700 hover:bg-gray-100"
-                        }`}
+                      className={`p-2 rounded-md ${
+                        currentPage === 1
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
@@ -821,20 +829,22 @@ const Cashbook = () => {
                     <button
                       onClick={goToNextPage}
                       disabled={currentPage === totalPages}
-                      className={`p-2 rounded-md ${currentPage === totalPages
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-gray-700 hover:bg-gray-100"
-                        }`}
+                      className={`p-2 rounded-md ${
+                        currentPage === totalPages
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
                     <button
                       onClick={goToLastPage}
                       disabled={currentPage === totalPages}
-                      className={`p-2 rounded-md ${currentPage === totalPages
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-gray-700 hover:bg-gray-100"
-                        }`}
+                      className={`p-2 rounded-md ${
+                        currentPage === totalPages
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
                     >
                       <ChevronsRight className="h-4 w-4" />
                     </button>
