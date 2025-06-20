@@ -57,21 +57,25 @@ export async function POST(req) {
           `SELECT * FROM loan_bussiness WHERE id = ?`,
           [id]
         );
-        // console.log(`Loan approved:`, loanResult[0]);
-        const Totalpay = loanResult[0].Totalpay;
+        console.log(`Loan approved:`, loanResult[0]);
+        const loanAmount = loanResult[0].loanAmount;
         const serviceCharge = loanResult[0].serviceCharge;
+        const Totalpay = loanResult[0].Totalpay;
+
+        // Calculate interest
+        const interest = Totalpay - loanAmount;
 
         //insert to cashbook
         const [CashIn] = await connection.execute(
           `Insert into cashbook (amount, type,method, description, created_at) values (?, ?, ?, ?, NOW())`,
           [
-            Totalpay,
-            "expense",
+            loanAmount,
+            "loan",
             "cash",
             `Loan approved: ${loanResult[0].loanType} (${loanResult[0].type})`,
           ]
         );
-        // console.log(`Cashbook entry created:`, CashIn);
+        console.log(`Cashbook entry created:`, CashIn);
         //insert the service charge to cashbook
         const [ServiceCharge] = await connection.execute(
           `Insert into cashbook (amount, type, method, description, created_at) values (?, ?, ?, ?, NOW())`,
@@ -82,8 +86,18 @@ export async function POST(req) {
             `Service charge for loan: ${loanResult[0].loanType} (${loanResult[0].type})`,
           ]
         );
-        // console.log(`Cashbook entry created:`, ServiceCharge);
-        // Additional logic for approving a loan can be added here
+        console.log(`Cashbook entry created:`, ServiceCharge);
+        // Insert the interest to cashbook
+        const [InterestEntry] = await connection.execute(
+          `Insert into cashbook (amount, type, method, description, created_at) values (?, ?, ?, ?, NOW())`,
+          [
+            interest,
+            "interest",
+            "cash",
+            `Interest for loan: ${loanResult[0].loanType} (${loanResult[0].type})`,
+          ]
+        );
+        console.log(`Interest entry created:`, InterestEntry);
       }
       return new Response(
         JSON.stringify({

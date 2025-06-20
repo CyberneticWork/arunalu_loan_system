@@ -11,7 +11,7 @@ export async function GET(req) {
     });
   }
   let connection;
-  if (action !== "getAll" && action !== "getTodayExpenses") {
+  if (action !== "getAll" && action !== "getTodayExpenses" && action !== "getTotalLoanCash") {
     return new Response(JSON.stringify({ error: "Invalid action specified" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
@@ -35,7 +35,7 @@ export async function GET(req) {
         { status: 500 }
       );
     }
-  } else {
+  } else if (action === "getAll") {
     try {
       connection = await connectDB();
       const [rows] = await connection.execute(`
@@ -62,6 +62,25 @@ export async function GET(req) {
         { status: 500 }
       );
     }
+  }else if (action === "getTotalLoanCash") {
+    try {
+      connection = await connectDB();
+      const [rows] = await connection.execute(`
+      SELECT SUM(amount) AS total_loan_cash FROM cashbook WHERE type = 'loan' AND method = 'cash';
+    `);
+      await connection.end();
+
+      return new Response(JSON.stringify({ code: "SUCCESS", data: rows }), {
+        status: 200,
+      });
+    } catch (error) {
+      if (connection) await connection.end();
+      return new Response(
+        JSON.stringify({ code: "ERROR", message: error.message }),
+        { status: 500 }
+      );
+    }
+    
   }
 }
 export async function POST(req) {

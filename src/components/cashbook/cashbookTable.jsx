@@ -17,6 +17,7 @@ const Cashbook = () => {
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [todayExpenses, setTodayExpenses] = useState(0);
+  const [loanAmount, setLoanAmount] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [newTransaction, setNewTransaction] = useState({
     date: new Date().toISOString().split("T")[0],
@@ -47,6 +48,11 @@ const Cashbook = () => {
   useEffect(() => {
     fetchTransactions();
     fetchTodayExpenses();
+    fetchTotalLoanCash();
+    const loanAmountTotal = cashTransactions
+      .filter((t) => t.type === "loan")
+      .reduce((sum, t) => sum + t.loanAmount, 0);
+    setLoanAmount(loanAmountTotal);
   }, []);
 
   const fetchTransactions = async () => {
@@ -92,18 +98,43 @@ const Cashbook = () => {
     }
   };
 
+//fetch today expenses
+  const fetchTotalLoanCash = async () => {
+    try {
+      const response = await fetch("/api/cashbook?action=getTotalLoanCash");
+      const result = await response.json();
+
+      if (result.code === "SUCCESS") {
+        setLoanAmount(result.data[0].total_loan_cash || 0);
+      } else {
+        console.error("Failed to fetch today's expenses:", result.message);
+        alert("Failed to load today's expenses. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error fetching today's expenses:", error);
+      alert("Error loading today's expenses. Please try again.");
+    }
+  };
+
   // Calculate totals
   const cashTransactions = transactions.filter((t) => t.method === "cash");
   const bankTransactions = transactions.filter((t) => t.method === "bank");
   const expenses = transactions.filter((t) => t.type === "expense");
 
+  // Calculate cash amount (do NOT include interest or loan)
   const cashAmount = cashTransactions.reduce((sum, t) => {
     if (t.type === "income") return sum + t.amount;
     if (t.type === "expense") return sum - t.amount;
     if (t.type === "deposit") return sum - t.amount; // Cash out for deposit
     if (t.type === "withdrawal") return sum + t.amount; // Cash in from withdrawal
+    // Do NOT add interest or loan here
     return sum;
   }, 0);
+
+  // Calculate total interest amount (cash only)
+  const interestAmount = cashTransactions
+    .filter((t) => t.type === "interest")
+    .reduce((sum, t) => sum + t.amount, 0);
 
   const bankValue = bankTransactions.reduce((sum, t) => {
     if (t.type === "income") return sum + t.amount;
@@ -346,9 +377,8 @@ const Cashbook = () => {
                   Cash Amount
                 </p>
                 <p
-                  className={`text-2xl font-bold ${
-                    cashAmount >= 0 ? "text-green-600" : "text-red-600"
-                  }`}
+                  className={`text-2xl font-bold ${cashAmount >= 0 ? "text-green-600" : "text-red-600"
+                    }`}
                 >
                   {formatCurrency(cashAmount)}
                 </p>
@@ -367,9 +397,8 @@ const Cashbook = () => {
                   Bank Value
                 </p>
                 <p
-                  className={`text-2xl font-bold ${
-                    bankValue >= 0 ? "text-blue-600" : "text-red-600"
-                  }`}
+                  className={`text-2xl font-bold ${bankValue >= 0 ? "text-blue-600" : "text-red-600"
+                    }`}
                 >
                   {formatCurrency(bankValue)}
                 </p>
@@ -396,6 +425,43 @@ const Cashbook = () => {
               </div>
             </div>
           </div>
+          {/* Loan ammount Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  Total Loan Outstanding
+                </p>
+                <p className="text-2xl font-bold text-red-600">
+                  {formatCurrency(loanAmount)}
+                </p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-full">
+                <TrendingDown className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Interest Amount Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  Interest Amount
+                </p>
+                <p
+                  className={`text-2xl font-bold ${interestAmount >= 0 ? "text-green-600" : "text-red-600"
+                    }`}
+                >
+                  {formatCurrency(interestAmount)}
+                </p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-full">
+                <DollarSign className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
         </div>
 
         {/* Transactions Table */}
@@ -666,21 +732,20 @@ const Cashbook = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              transaction.type === "income" ||
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${transaction.type === "income" ||
                               (transaction.type === "withdrawal" &&
                                 transaction.method === "bank") ||
                               (transaction.type === "withdrawal" &&
                                 transaction.method === "cash")
-                                ? "bg-green-100 text-green-800"
-                                : transaction.type === "expense" ||
-                                  (transaction.type === "deposit" &&
-                                    transaction.method === "cash") ||
-                                  (transaction.type === "deposit" &&
-                                    transaction.method === "bank")
+                              ? "bg-green-100 text-green-800"
+                              : transaction.type === "expense" ||
+                                (transaction.type === "deposit" &&
+                                  transaction.method === "cash") ||
+                                (transaction.type === "deposit" &&
+                                  transaction.method === "bank")
                                 ? "bg-red-100 text-red-800"
                                 : "bg-purple-100 text-purple-800"
-                            }`}
+                              }`}
                           >
                             {transaction.type}
                           </span>
@@ -690,31 +755,29 @@ const Cashbook = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              transaction.method === "cash"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-blue-100 text-blue-800"
-                            }`}
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${transaction.method === "cash"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-blue-100 text-blue-800"
+                              }`}
                           >
                             {transaction.method}
                           </span>
                         </td>
                         <td
-                          className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
-                            transaction.type === "income" ||
+                          className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${transaction.type === "income" ||
                             (transaction.type === "withdrawal" &&
                               transaction.method === "bank") ||
                             (transaction.type === "withdrawal" &&
                               transaction.method === "cash")
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
+                            ? "text-green-600"
+                            : "text-red-600"
+                            }`}
                         >
                           {transaction.type === "income" ||
-                          (transaction.type === "withdrawal" &&
-                            transaction.method === "bank") ||
-                          (transaction.type === "withdrawal" &&
-                            transaction.method === "cash")
+                            (transaction.type === "withdrawal" &&
+                              transaction.method === "bank") ||
+                            (transaction.type === "withdrawal" &&
+                              transaction.method === "cash")
                             ? "+"
                             : "-"}
                           {formatCurrency(transaction.amount)}
@@ -735,22 +798,20 @@ const Cashbook = () => {
                     <button
                       onClick={goToFirstPage}
                       disabled={currentPage === 1}
-                      className={`p-2 rounded-md ${
-                        currentPage === 1
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
+                      className={`p-2 rounded-md ${currentPage === 1
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-gray-700 hover:bg-gray-100"
+                        }`}
                     >
                       <ChevronsLeft className="h-4 w-4" />
                     </button>
                     <button
                       onClick={goToPreviousPage}
                       disabled={currentPage === 1}
-                      className={`p-2 rounded-md ${
-                        currentPage === 1
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
+                      className={`p-2 rounded-md ${currentPage === 1
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-gray-700 hover:bg-gray-100"
+                        }`}
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
@@ -760,22 +821,20 @@ const Cashbook = () => {
                     <button
                       onClick={goToNextPage}
                       disabled={currentPage === totalPages}
-                      className={`p-2 rounded-md ${
-                        currentPage === totalPages
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
+                      className={`p-2 rounded-md ${currentPage === totalPages
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-gray-700 hover:bg-gray-100"
+                        }`}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
                     <button
                       onClick={goToLastPage}
                       disabled={currentPage === totalPages}
-                      className={`p-2 rounded-md ${
-                        currentPage === totalPages
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
+                      className={`p-2 rounded-md ${currentPage === totalPages
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-gray-700 hover:bg-gray-100"
+                        }`}
                     >
                       <ChevronsRight className="h-4 w-4" />
                     </button>
