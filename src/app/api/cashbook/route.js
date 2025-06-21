@@ -55,10 +55,12 @@ export async function GET(req) {
       ORDER BY created_at DESC;
     `);
       const [TotalCash] = await connection.execute(`
-      SELECT (
+  SELECT (
     SUM(CASE 
         WHEN (type = 'income' OR type = 'withdrawal') AND method = 'cash' 
         THEN amount 
+        WHEN type = 'loan' AND method = 'cash'  -- Subtract loan amounts from cash
+        THEN -amount
         ELSE 0 
     END)
     -
@@ -67,10 +69,9 @@ export async function GET(req) {
         THEN amount 
         ELSE 0 
     END)
-) AS NetCashAmount
-FROM cashbook;
-
-    `);
+  ) AS NetCashAmount
+  FROM cashbook;
+`);
 
       const [TotalBank] = await connection.execute(`
       SELECT (
@@ -89,6 +90,32 @@ FROM cashbook;
 FROM cashbook;
 
     `);
+
+      // Update the TotalOutstanding query to handle loan-deduction
+      const [TotalOutstanding] = await connection.execute(`
+  SELECT SUM(
+    CASE 
+      WHEN type = 'loan' THEN TotalLoan
+      WHEN type = 'loan-deduction' THEN -TotalLoan
+      ELSE 0 
+    END
+  ) AS totalLoanValue 
+  FROM cashbook 
+  WHERE type IN ('loan', 'loan-deduction')
+`);
+
+      // Update the TotalIncomeInterest query to handle interest-deduction
+      const [TotalIncomeInterest] = await connection.execute(`
+  SELECT SUM(
+    CASE 
+      WHEN type = 'loan' THEN TotalInt
+      WHEN type = 'interest-deduction' THEN -TotalInt
+      ELSE 0 
+    END
+  ) AS totalInterestValue 
+  FROM cashbook 
+  WHERE type IN ('loan', 'interest-deduction')
+`);
       //console log need to show netbank and netcash amount
       // console.log("eshan", TotalCash[0]);
       // console.log("eshan", TotalBank[0]);
@@ -100,6 +127,8 @@ FROM cashbook;
           data: rows,
           TotalCash: TotalCash[0].NetCashAmount,
           TotalBank: TotalBank[0].NetBankAmount,
+          TotalOutstanding: TotalOutstanding[0].totalLoanValue,
+          TotalIncomeInterest: TotalIncomeInterest[0].totalInterestValue,
         }),
         {
           status: 200,

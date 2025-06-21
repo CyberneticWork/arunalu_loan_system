@@ -67,12 +67,14 @@ export async function POST(req) {
 
         //insert to cashbook
         const [CashIn] = await connection.execute(
-          `Insert into cashbook (amount, type,method, description, created_at) values (?, ?, ?, ?, NOW())`,
+          `Insert into cashbook (amount, type,method, description,TotalInt,TotalLoan, created_at) values (?,?,?, ?, ?, ?, NOW())`,
           [
             loanAmount,
             "loan",
             "cash",
             `Loan approved: ${loanResult[0].loanType} (${loanResult[0].type})`,
+            interest,
+            loanAmount,
           ]
         );
         console.log(`Cashbook entry created:`, CashIn);

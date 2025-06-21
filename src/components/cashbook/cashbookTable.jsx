@@ -38,6 +38,9 @@ const Cashbook = () => {
   );
   const [netCash, setNetCash] = useState(0);
   const [totalbankValue, setTotalbankValue] = useState(0);
+  const [totalOutstanding, setTotalOutstanding] = useState(0);
+  const [totalIncomeInterest, setTotalIncomeInterest] = useState(0);
+
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
   const [withdrawalDescription, setWithdrawalDescription] = useState(
@@ -66,6 +69,9 @@ const Cashbook = () => {
         // console.log("Transactions fetched successfully:", result.TotalBank);
         setNetCash(result.TotalCash);
         setTotalbankValue(result.TotalBank);
+        setTotalOutstanding(result.TotalOutstanding);
+        console.log(result.TotalIncomeInterest);
+        setTotalIncomeInterest(result.TotalIncomeInterest);
       } else {
         console.error("Failed to fetch transactions:", result.message);
         alert("Failed to load transactions. Please try again.");
@@ -331,7 +337,48 @@ const Cashbook = () => {
       currency: "LKR",
     }).format(amount || 0);
   };
-
+  const cardData = [
+    {
+      title: "Cash Amount",
+      value: netCash,
+      color: cashAmount >= 0 ? "green" : "red",
+      iconBg: "bg-green-100",
+      iconColor: "text-green-600",
+      Icon: DollarSign,
+    },
+    {
+      title: "Bank Value",
+      value: totalbankValue,
+      color: bankValue >= 0 ? "blue" : "red",
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-600",
+      Icon: CreditCard,
+    },
+    {
+      title: "Today Total Expenses",
+      value: todayExpenses,
+      color: "red",
+      iconBg: "bg-red-100",
+      iconColor: "text-red-600",
+      Icon: TrendingDown,
+    },
+    {
+      title: "Total Loan Value",
+      value: totalOutstanding,
+      color: bankValue >= 0 ? "blue" : "red",
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-600",
+      Icon: CreditCard,
+    },
+    {
+      title: "Total Interest Value",
+      value: totalIncomeInterest,
+      color: bankValue >= 0 ? "blue" : "red",
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-600",
+      Icon: CreditCard,
+    },
+  ];
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -343,63 +390,26 @@ const Cashbook = () => {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Cash Amount Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
-                  Cash Amount
-                </p>
-                <p
-                  className={`text-2xl font-bold ${
-                    cashAmount >= 0 ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {formatCurrency(netCash)}
-                </p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Bank Value Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
-                  Bank Value
-                </p>
-                <p
-                  className={`text-2xl font-bold ${
-                    bankValue >= 0 ? "text-blue-600" : "text-red-600"
-                  }`}
-                >
-                  {formatCurrency(totalbankValue)}
-                </p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <CreditCard className="h-6 w-6 text-blue-600" />
+          {cardData.map((card, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">
+                    {card.title}
+                  </p>
+                  <p className={`text-2xl font-bold text-${card.color}-600`}>
+                    {formatCurrency(card.value)}
+                  </p>
+                </div>
+                <div className={`p-3 ${card.iconBg} rounded-full`}>
+                  <card.Icon className={`h-6 w-6 ${card.iconColor}`} />
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Total Expenses Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
-                  Today Total Expenses
-                </p>
-                <p className="text-2xl font-bold text-red-600">
-                  {formatCurrency(todayExpenses)}
-                </p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-full">
-                <TrendingDown className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Transactions Table */}

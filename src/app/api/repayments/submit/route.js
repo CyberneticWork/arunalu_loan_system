@@ -58,6 +58,109 @@ export async function POST(request) {
         ]
       );
 
+      // Get loan details for calculations
+      const [loanDetails] = await connection.execute(
+        `SELECT loanAmount, term, Totalpay 
+          FROM loan_bussiness 
+          WHERE id = ?`,
+        [payment.loanId]
+      );
+
+      if (loanDetails.length === 0) {
+        throw new Error(`Loan with ID ${payment.loanId} not found`);
+      }
+
+      const loanAmountFromDB = parseFloat(loanDetails[0].loanAmount);
+      const termFromDB = parseInt(loanDetails[0].term);
+      const totalPayFromDB = parseFloat(loanDetails[0].Totalpay);
+
+      // Calculate interest and outstanding per installment
+      const interestPerInstallment = (
+        (totalPayFromDB - loanAmountFromDB) /
+        termFromDB
+      ).toFixed(2);
+      const outstandingPerInstallment = (loanAmountFromDB / termFromDB).toFixed(
+        2
+      );
+
+      // Get the generated transaction ID
+      const [transactionResult] = await connection.execute(
+        "SELECT transactionId FROM repayment WHERE id = ?",
+        [result.insertId]
+      );
+      const transactionId = transactionResult[0].transactionId;
+
+      // Add income transaction to cashbook
+      await connection.execute(
+        `INSERT INTO cashbook (
+          description,
+          type,
+          amount,
+          category,
+          method,
+          TotInterest,
+          TotOutstanding,
+          NetAmount,
+          created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())`,
+        [
+          `Loan Repayment - ${transactionId}`,
+          "income",
+          newPaidAmount.toFixed(2),
+          "Loan Repayment",
+          payment.paymentMethod.toLowerCase(),
+          interestPerInstallment,
+          outstandingPerInstallment,
+          newPaidAmount.toFixed(2),
+        ]
+      );
+
+      // For loan value deduction
+      await connection.execute(
+        `INSERT INTO cashbook (
+          description,
+          type,
+          amount,
+          category,
+          method,
+          TotalInt,
+          TotalLoan,
+          created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())`,
+        [
+          `Loan Value Deduction - ${transactionId}`,
+          "loan-deduction",
+          outstandingPerInstallment,
+          "Loan Value Adjustment",
+          "system",
+          0, // No interest affected
+          outstandingPerInstallment, // Amount to reduce from total loan
+        ]
+      );
+
+      // For interest value deduction
+      await connection.execute(
+        `INSERT INTO cashbook (
+          description,
+          type,
+          amount,
+          category,
+          method,
+          TotalInt,
+          TotalLoan,
+          created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())`,
+        [
+          `Interest Value Deduction - ${transactionId}`,
+          "interest-deduction",
+          interestPerInstallment,
+          "Interest Value Adjustment",
+          "system",
+          interestPerInstallment, // Amount to reduce from total interest
+          0, // No loan amount affected
+        ]
+      );
+
       // If payment completed, update loan_bussiness status
       if (status === "completed") {
         await connection.execute(
@@ -67,33 +170,6 @@ export async function POST(request) {
           [payment.loanId]
         );
       }
-
-      // Get the generated transaction ID
-      const [transactionResult] = await connection.execute(
-        "SELECT transactionId FROM repayment WHERE id = ?",
-        [result.insertId]
-      );
-
-      const transactionId = transactionResult[0].transactionId;
-
-      // Add transaction to cashbook
-      await connection.execute(
-        `INSERT INTO cashbook (
-          description,
-          type,
-          amount,
-          category,
-          method,
-          created_at
-        ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP())`,
-        [
-          `Loan Repayment - ${transactionId}`,
-          "income",
-          newPaidAmount.toFixed(2),
-          "Loan Repayment",
-          payment.paymentMethod.toLowerCase(), // Convert to lowercase to match 'cash' or 'bank'
-        ]
-      );
 
       results.push({
         success: true,
