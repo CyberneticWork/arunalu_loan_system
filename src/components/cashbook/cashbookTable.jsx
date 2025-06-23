@@ -385,7 +385,7 @@ const Cashbook = () => {
     },
     {
       title: "Total Loan Value",
-      value: totalOutstanding,
+      value: Math.abs(totalOutstanding), // <-- Ensure always positive
       color: bankValue >= 0 ? "blue" : "red",
       iconBg: "bg-blue-100",
       iconColor: "text-blue-600",

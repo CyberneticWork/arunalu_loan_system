@@ -25,14 +25,7 @@ export async function POST(request) {
       const paymentCount = countResult[0].count + 1;
       const previousPaidAmount = parseFloat(countResult[0].totalPaid || 0);
       const newPaidAmount = parseFloat(payment.paidAmount);
-      const totalPaidAmount = (previousPaidAmount + newPaidAmount).toFixed(2);
-
-      // Calculate remaining amount
-      const remainingAmount = (
-        parseFloat(payment.fullLoanAmount) - parseFloat(totalPaidAmount)
-      ).toFixed(2);
-
-      const status = parseFloat(remainingAmount) <= 0 ? "completed" : "pending";
+      const totalPaidAmount = previousPaidAmount + newPaidAmount;
 
       // Get loan details for calculations
       const [loanDetails] = await connection.execute(
@@ -50,23 +43,57 @@ export async function POST(request) {
       const termFromDB = parseInt(loanDetails[0].term);
       const totalPayFromDB = parseFloat(loanDetails[0].Totalpay);
 
-      // Calculate interest and outstanding per installment
-      const interestPerInstallment = (
-        (totalPayFromDB - loanAmountFromDB) /
-        termFromDB
-      ).toFixed(2);
-      const outstandingPerInstallment = (loanAmountFromDB / termFromDB).toFixed(
-        2
+      // Now you can safely use totalPayFromDB
+      let overpayment = 0;
+      if (totalPaidAmount > totalPayFromDB) {
+        overpayment = totalPaidAmount - totalPayFromDB;
+      }
+
+      // Calculate how much principal and interest already paid
+      const [prevRepayments] = await connection.execute(
+        `SELECT COALESCE(SUM(loan_amount),0) as paidPrincipal, COALESCE(SUM(TotInterest),0) as paidInterest FROM repayment WHERE loan_bussiness_id = ?`,
+        [payment.loanId]
       );
+      let principalLeft = loanAmountFromDB - parseFloat(prevRepayments[0].paidPrincipal || 0);
+      let interestLeft = (totalPayFromDB - loanAmountFromDB) - parseFloat(prevRepayments[0].paidInterest || 0);
+
+      // --- PROPORTIONAL SPLIT LOGIC ---
+      // Per installment
+      const perInstallment = totalPayFromDB / termFromDB;
+      const perInstallmentPrincipal = loanAmountFromDB / termFromDB;
+      const perInstallmentInterest = (totalPayFromDB - loanAmountFromDB) / termFromDB;
+
+      // Proportional split for this payment
+      let principalPaid = 0;
+      let interestPaid = 0;
+      if (principalLeft <= 0 && interestLeft <= 0) {
+        principalPaid = 0;
+        interestPaid = 0;
+      } else {
+        // Calculate how much of this payment goes to principal and interest
+        // If payment is more than remaining, cap at remaining
+        let maxPrincipal = Math.min(principalLeft, newPaidAmount * (perInstallmentPrincipal / perInstallment));
+        let maxInterest = Math.min(interestLeft, newPaidAmount * (perInstallmentInterest / perInstallment));
+        // If payment is more than remaining total, adjust last payment
+        if (newPaidAmount >= (principalLeft + interestLeft)) {
+          principalPaid = principalLeft;
+          interestPaid = interestLeft;
+        } else {
+          principalPaid = maxPrincipal;
+          interestPaid = maxInterest;
+        }
+      }
+
+      // Calculate remaining amount
+      let remainingAmount = (totalPayFromDB - (parseFloat(prevRepayments[0].paidPrincipal) + parseFloat(prevRepayments[0].paidInterest) + newPaidAmount));
+      if (remainingAmount < 0) remainingAmount = 0;
+
+      const status = remainingAmount <= 0 ? "completed" : "pending";
 
       // Calculate expected installment
-      const expectedInstallment = (parseFloat(payment.fullLoanAmount) / termFromDB).toFixed(2);
+      const expectedInstallment = perInstallment;
 
-      // Calculate overpayment/underpayment
-      const paidAmount = parseFloat(payment.paidAmount);
-      const diff = (paidAmount - expectedInstallment).toFixed(2);
-
-      // Fetch previous balance (credit/debit)
+      // Calculate overpayment/underpayment for balance tracking
       let previousBalance = 0;
       const [lastRepayment] = await connection.execute(
         `SELECT balance FROM repayment WHERE loan_bussiness_id = ? ORDER BY id DESC LIMIT 1`,
@@ -75,11 +102,17 @@ export async function POST(request) {
       if (lastRepayment.length > 0) {
         previousBalance = parseFloat(lastRepayment[0].balance);
       }
+      // Calculate new balance for this repayment (for arrears/overpayment tracking)
+      let newBalance = 0;
+      if (totalPaidAmount >= totalPayFromDB) {
+        // Loan is fully paid, no overpayment should be tracked
+        newBalance = 0;
+      } else {
+        // Not fully paid, track running balance
+        newBalance = previousBalance + (newPaidAmount - expectedInstallment);
+      }
 
-      // New balance after this payment
-      const newBalance = (previousBalance + parseFloat(diff)).toFixed(2);
-
-      // Insert the payment record with balance
+      // Insert the payment record with correct principal and interest
       const [result] = await connection.execute(
         `INSERT INTO repayment (
           loan_bussiness_id,
@@ -90,33 +123,35 @@ export async function POST(request) {
           payment_method,
           setalment,
           balance,
-          status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          status,
+          TotInterest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           payment.loanId,
           paymentCount,
-          payment.loanAmount,
-          payment.fullLoanAmount,
-          paidAmount.toFixed(2),
+          principalPaid.toFixed(2),
+          totalPayFromDB.toFixed(2),
+          newPaidAmount.toFixed(2),
           payment.paymentMethod,
-          remainingAmount,
-          newBalance,
+          remainingAmount.toFixed(2),
+          newBalance.toFixed(2),
           status,
+          interestPaid.toFixed(2)
         ]
       );
 
       // Optionally, update loan_bussiness.credit_balance
       await connection.execute(
         `UPDATE loan_bussiness SET credit_balance = ? WHERE id = ?`,
-        [newBalance, payment.loanId]
+        [newBalance.toFixed(2), payment.loanId]
       );
 
       // Get the generated transaction ID
       const [transactionResult] = await connection.execute(
-        "SELECT transactionId FROM repayment WHERE id = ?",
+        "SELECT transactionId  FROM repayment WHERE id = ?",
         [result.insertId]
       );
-      const transactionId = transactionResult[0].transactionId;
+      const transactionId = transactionResult[0]?.transactionId || "";
 
       // Add income transaction to cashbook
       await connection.execute(
@@ -137,57 +172,61 @@ export async function POST(request) {
           newPaidAmount.toFixed(2),
           "Loan Repayment",
           payment.paymentMethod.toLowerCase(),
-          interestPerInstallment,
-          outstandingPerInstallment,
+          interestPaid.toFixed(2),
+          principalPaid.toFixed(2),
           newPaidAmount.toFixed(2),
         ]
       );
 
-      // For loan value deduction
-      await connection.execute(
-        `INSERT INTO cashbook (
-          description,
-          type,
-          amount,
-          category,
-          method,
-          TotalInt,
-          TotalLoan,
-          created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())`,
-        [
-          `Loan Value Deduction - ${transactionId}`,
-          "loan-deduction",
-          outstandingPerInstallment,
-          "Loan Value Adjustment",
-          "bank",
-          0, // No interest affected
-          outstandingPerInstallment, // Amount to reduce from total loan
-        ]
-      );
+      // For loan value deduction (principal only)
+      if (principalPaid > 0) {
+        await connection.execute(
+          `INSERT INTO cashbook (
+            description,
+            type,
+            amount,
+            category,
+            method,
+            TotalInt,
+            TotalLoan,
+            created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())`,
+          [
+            `Loan Value Deduction - ${transactionId}`,
+            "loan-deduction",
+            principalPaid.toFixed(2),
+            "Loan Value Adjustment",
+            "bank",
+            0,
+            principalPaid.toFixed(2),
+          ]
+        );
+      }
 
-      // For interest value deduction
-      await connection.execute(
-        `INSERT INTO cashbook (
-          description,
-          type,
-          amount,
-          category,
-          method,
-          TotalInt,
-          TotalLoan,
-          created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())`,
-        [
-          `Interest Value Deduction - ${transactionId}`,
-          "interest-deduction",
-          interestPerInstallment,
-          "Interest Value Adjustment",
-          "bank",
-          interestPerInstallment, // Amount to reduce from total interest
-          0, // No loan amount affected
-        ]
-      );
+      // For interest value deduction (interest only)
+      if (interestPaid > 0) {
+        await connection.execute(
+          `INSERT INTO cashbook (
+            description,
+            type,
+            amount,
+            category,
+            method,
+            TotalInt,
+            TotalLoan,
+            created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())`,
+          [
+            `Interest Value Deduction - ${transactionId}`,
+            "interest-deduction",
+            interestPaid.toFixed(2),
+            "Interest Value Adjustment",
+            "bank",
+            interestPaid.toFixed(2),
+            0,
+          ]
+        );
+      }
 
       // If payment completed, update loan_bussiness status
       if (status === "completed") {
@@ -203,7 +242,7 @@ export async function POST(request) {
         success: true,
         transactionId: transactionId,
         paymentId: result.insertId,
-        remainingAmount,
+        remainingAmount: remainingAmount.toFixed(2),
         status,
       });
     }
