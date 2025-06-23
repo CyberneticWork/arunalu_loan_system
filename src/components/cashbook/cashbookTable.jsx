@@ -11,6 +11,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  AlertTriangle,
+  CheckCircle,
 } from "lucide-react";
 
 const Cashbook = () => {
@@ -40,6 +42,8 @@ const Cashbook = () => {
   const [totalbankValue, setTotalbankValue] = useState(0);
   const [totalOutstanding, setTotalOutstanding] = useState(0);
   const [totalIncomeInterest, setTotalIncomeInterest] = useState(0);
+  const [totalArrears, setTotalArrears] = useState(0);
+  const [totalOverpayment, setTotalOverpayment] = useState(0);
 
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
@@ -51,6 +55,23 @@ const Cashbook = () => {
   useEffect(() => {
     fetchTransactions();
     fetchTodayExpenses();
+  }, []);
+
+  // Fetch overpayment and arrears summary
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const res = await fetch("/api/repayments/summary");
+        const data = await res.json();
+        if (data.code === "SUCCESS") {
+          setTotalArrears(data.totalArrears || 0);
+          setTotalOverpayment(data.totalOverpayment || 0);
+        }
+      } catch (e) {
+        // Optionally handle error
+      }
+    };
+    fetchSummary();
   }, []);
 
   const fetchTransactions = async () => {
@@ -385,6 +406,40 @@ const Cashbook = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Cashbook</h1>
           <p className="text-gray-600">Manage your cash flow and expenses</p>
+        </div>
+
+        {/* Arrears and Overpayment Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Arrears Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Arrears</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {formatCurrency(totalArrears)}
+                </p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-full">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+          {/* Overpayment Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  Overpayment
+                </p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatCurrency(totalOverpayment)}
+                </p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-full">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Summary Cards */}

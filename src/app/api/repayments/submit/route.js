@@ -34,30 +34,6 @@ export async function POST(request) {
 
       const status = parseFloat(remainingAmount) <= 0 ? "completed" : "pending";
 
-      // Insert the payment record
-      const [result] = await connection.execute(
-        `INSERT INTO repayment (
-          loan_bussiness_id,
-          paymentCount,
-          loan_amount,
-          full_loan_amount,
-          paid_amount,
-          payment_method,
-          setalment,
-          status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          payment.loanId,
-          paymentCount,
-          payment.loanAmount,
-          payment.fullLoanAmount,
-          newPaidAmount.toFixed(2),
-          payment.paymentMethod,
-          remainingAmount,
-          status,
-        ]
-      );
-
       // Get loan details for calculations
       const [loanDetails] = await connection.execute(
         `SELECT loanAmount, term, Totalpay 
@@ -81,6 +57,58 @@ export async function POST(request) {
       ).toFixed(2);
       const outstandingPerInstallment = (loanAmountFromDB / termFromDB).toFixed(
         2
+      );
+
+      // Calculate expected installment
+      const expectedInstallment = (parseFloat(payment.fullLoanAmount) / termFromDB).toFixed(2);
+
+      // Calculate overpayment/underpayment
+      const paidAmount = parseFloat(payment.paidAmount);
+      const diff = (paidAmount - expectedInstallment).toFixed(2);
+
+      // Fetch previous balance (credit/debit)
+      let previousBalance = 0;
+      const [lastRepayment] = await connection.execute(
+        `SELECT balance FROM repayment WHERE loan_bussiness_id = ? ORDER BY id DESC LIMIT 1`,
+        [payment.loanId]
+      );
+      if (lastRepayment.length > 0) {
+        previousBalance = parseFloat(lastRepayment[0].balance);
+      }
+
+      // New balance after this payment
+      const newBalance = (previousBalance + parseFloat(diff)).toFixed(2);
+
+      // Insert the payment record with balance
+      const [result] = await connection.execute(
+        `INSERT INTO repayment (
+          loan_bussiness_id,
+          paymentCount,
+          loan_amount,
+          full_loan_amount,
+          paid_amount,
+          payment_method,
+          setalment,
+          balance,
+          status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          payment.loanId,
+          paymentCount,
+          payment.loanAmount,
+          payment.fullLoanAmount,
+          paidAmount.toFixed(2),
+          payment.paymentMethod,
+          remainingAmount,
+          newBalance,
+          status,
+        ]
+      );
+
+      // Optionally, update loan_bussiness.credit_balance
+      await connection.execute(
+        `UPDATE loan_bussiness SET credit_balance = ? WHERE id = ?`,
+        [newBalance, payment.loanId]
       );
 
       // Get the generated transaction ID
