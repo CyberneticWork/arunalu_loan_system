@@ -132,7 +132,6 @@ export async function POST(request) {
           "loan-deduction",
           outstandingPerInstallment,
           "Loan Value Adjustment",
-          "system",
           0, // No interest affected
           outstandingPerInstallment, // Amount to reduce from total loan
         ]
@@ -155,7 +154,6 @@ export async function POST(request) {
           "interest-deduction",
           interestPerInstallment,
           "Interest Value Adjustment",
-          "system",
           interestPerInstallment, // Amount to reduce from total interest
           0, // No loan amount affected
         ]
