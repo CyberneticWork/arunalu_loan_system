@@ -127,7 +127,7 @@ export async function GET(req) {
       const [ServiceCharge] = await connection.execute(`
   SELECT SUM(serviceCharge) as totalServiceCharge 
   FROM loan_bussiness 
-  WHERE status != 'completed'
+   
 `);
       //console log need to show netbank and netcash amount
       // console.log("eshan", TotalCash[0]);
