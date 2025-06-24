@@ -59,35 +59,43 @@ export async function GET(req) {
     SUM(CASE 
         WHEN (type = 'income' OR type = 'withdrawal') AND method = 'cash' 
         THEN amount 
-        WHEN type = 'loan' AND method = 'cash'  -- Subtract loan amounts from cash
+        WHEN type = 'loan' AND method = 'cash'
         THEN -amount
         ELSE 0 
     END)
-    -
-    SUM(CASE 
+    - SUM(CASE 
         WHEN type = 'deposit' AND method = 'cash' 
         THEN amount 
         ELSE 0 
+    END)
+    - SUM(CASE
+        WHEN type = 'expense' AND method = 'cash'
+        THEN amount
+        ELSE 0
     END)
   ) AS NetCashAmount
   FROM cashbook;
 `);
 
       const [TotalBank] = await connection.execute(`
-      SELECT (
+  SELECT (
     SUM(CASE 
         WHEN (type = 'income' OR type = 'withdrawal') AND method = 'bank' 
         THEN amount 
         ELSE 0 
     END)
-    -
-    SUM(CASE 
+    - SUM(CASE 
         WHEN type = 'deposit' AND method = 'bank' 
         THEN amount 
         ELSE 0 
     END)
-) AS NetBankAmount
-FROM cashbook;
+    - SUM(CASE
+        WHEN type = 'expense' AND method = 'bank'
+        THEN amount
+        ELSE 0
+    END)
+  ) AS NetBankAmount
+  FROM cashbook;
 
     `);
 
