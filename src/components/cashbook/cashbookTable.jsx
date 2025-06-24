@@ -171,20 +171,20 @@ const Cashbook = () => {
       newTransaction.category
     ) {
       const amount = parseFloat(newTransaction.amount);
-      if (
-        newTransaction.method === "cash" &&
-        amount > netCash
-      ) {
-        alert("Insufficient cash balance for this expense.");
-        return;
-      }
-      if (
-        newTransaction.method === "bank" &&
-        amount > totalbankValue
-      ) {
-        alert("Insufficient bank balance for this expense.");
-        return;
-      }
+      // if (
+      //   newTransaction.method === "cash" &&
+      //   amount > netCash
+      // ) {
+      //   alert("Insufficient cash balance for this expense.");
+      //   return;
+      // }
+      // if (
+      //   newTransaction.method === "bank" &&
+      //   amount > totalbankValue
+      // ) {
+      //   alert("Insufficient bank balance for this expense.");
+      //   return;
+      // }
 
       try {
         const response = await fetch("/api/cashbook", {
