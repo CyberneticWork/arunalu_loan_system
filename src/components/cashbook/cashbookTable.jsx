@@ -50,6 +50,7 @@ const Cashbook = () => {
   const [withdrawalDescription, setWithdrawalDescription] = useState(
     "Cash withdrawal from bank"
   );
+  const [totalServiceCharge, setTotalServiceCharge] = useState(0);
 
   // Fetch transactions on component mount
   useEffect(() => {
@@ -93,6 +94,7 @@ const Cashbook = () => {
         setTotalOutstanding(result.TotalOutstanding);
         console.log(result.TotalIncomeInterest);
         setTotalIncomeInterest(result.TotalIncomeInterest);
+        setTotalServiceCharge(result.TotalServiceCharge || 0);
       } else {
         console.error("Failed to fetch transactions:", result.message);
         alert("Failed to load transactions. Please try again.");
@@ -220,7 +222,7 @@ const Cashbook = () => {
           });
           setShowForm(false);
 
-          // Refresh data from server
+          // Optionally refresh data from server
           fetchTransactions();
           fetchTodayExpenses();
         } else {
@@ -418,6 +420,14 @@ const Cashbook = () => {
       iconColor: "text-blue-600",
       Icon: CreditCard,
     },
+    {
+      title: "Service Charges",
+      value: totalServiceCharge,
+      color: "purple",
+      iconBg: "bg-purple-100",
+      iconColor: "text-purple-600",
+      Icon: CreditCard,
+    },
   ];
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -433,7 +443,9 @@ const Cashbook = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Arrears</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  Arrears
+                </p>
                 <p className="text-2xl font-bold text-red-600">
                   {formatCurrency(totalArrears)}
                 </p>
@@ -754,20 +766,21 @@ const Cashbook = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${transaction.type === "income" ||
-                                (transaction.type === "withdrawal" &&
-                                  transaction.method === "bank") ||
-                                (transaction.type === "withdrawal" &&
-                                  transaction.method === "cash")
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              transaction.type === "income" ||
+                              (transaction.type === "withdrawal" &&
+                                transaction.method === "bank") ||
+                              (transaction.type === "withdrawal" &&
+                                transaction.method === "cash")
                                 ? "bg-green-100 text-green-800"
                                 : transaction.type === "expense" ||
                                   (transaction.type === "deposit" &&
                                     transaction.method === "cash") ||
                                   (transaction.type === "deposit" &&
                                     transaction.method === "bank")
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-purple-100 text-purple-800"
-                              }`}
+                                ? "bg-red-100 text-red-800"
+                                : "bg-purple-100 text-purple-800"
+                            }`}
                           >
                             {transaction.type}
                           </span>
@@ -777,29 +790,31 @@ const Cashbook = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${transaction.method === "cash"
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              transaction.method === "cash"
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-blue-100 text-blue-800"
-                              }`}
+                            }`}
                           >
                             {transaction.method}
                           </span>
                         </td>
                         <td
-                          className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${transaction.type === "income" ||
-                              (transaction.type === "withdrawal" &&
-                                transaction.method === "bank") ||
-                              (transaction.type === "withdrawal" &&
-                                transaction.method === "cash")
-                              ? "text-green-600"
-                              : "text-red-600"
-                            }`}
-                        >
-                          {transaction.type === "income" ||
+                          className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
+                            transaction.type === "income" ||
                             (transaction.type === "withdrawal" &&
                               transaction.method === "bank") ||
                             (transaction.type === "withdrawal" &&
                               transaction.method === "cash")
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {transaction.type === "income" ||
+                          (transaction.type === "withdrawal" &&
+                            transaction.method === "bank") ||
+                          (transaction.type === "withdrawal" &&
+                            transaction.method === "cash")
                             ? "+"
                             : "-"}
                           {formatCurrency(transaction.amount)}
@@ -820,20 +835,22 @@ const Cashbook = () => {
                     <button
                       onClick={goToFirstPage}
                       disabled={currentPage === 1}
-                      className={`p-2 rounded-md ${currentPage === 1
+                      className={`p-2 rounded-md ${
+                        currentPage === 1
                           ? "text-gray-400 cursor-not-allowed"
                           : "text-gray-700 hover:bg-gray-100"
-                        }`}
+                      }`}
                     >
                       <ChevronsLeft className="h-4 w-4" />
                     </button>
                     <button
                       onClick={goToPreviousPage}
                       disabled={currentPage === 1}
-                      className={`p-2 rounded-md ${currentPage === 1
+                      className={`p-2 rounded-md ${
+                        currentPage === 1
                           ? "text-gray-400 cursor-not-allowed"
                           : "text-gray-700 hover:bg-gray-100"
-                        }`}
+                      }`}
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
@@ -843,20 +860,22 @@ const Cashbook = () => {
                     <button
                       onClick={goToNextPage}
                       disabled={currentPage === totalPages}
-                      className={`p-2 rounded-md ${currentPage === totalPages
+                      className={`p-2 rounded-md ${
+                        currentPage === totalPages
                           ? "text-gray-400 cursor-not-allowed"
                           : "text-gray-700 hover:bg-gray-100"
-                        }`}
+                      }`}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
                     <button
                       onClick={goToLastPage}
                       disabled={currentPage === totalPages}
-                      className={`p-2 rounded-md ${currentPage === totalPages
+                      className={`p-2 rounded-md ${
+                        currentPage === totalPages
                           ? "text-gray-400 cursor-not-allowed"
                           : "text-gray-700 hover:bg-gray-100"
-                        }`}
+                      }`}
                     >
                       <ChevronsRight className="h-4 w-4" />
                     </button>

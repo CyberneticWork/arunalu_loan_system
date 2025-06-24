@@ -124,6 +124,11 @@ export async function GET(req) {
   FROM cashbook 
   WHERE type IN ('loan', 'interest-deduction')
 `);
+      const [ServiceCharge] = await connection.execute(`
+  SELECT SUM(serviceCharge) as totalServiceCharge 
+  FROM loan_bussiness 
+  WHERE status != 'completed'
+`);
       //console log need to show netbank and netcash amount
       // console.log("eshan", TotalCash[0]);
       // console.log("eshan", TotalBank[0]);
@@ -137,6 +142,7 @@ export async function GET(req) {
           TotalBank: TotalBank[0].NetBankAmount,
           TotalOutstanding: TotalOutstanding[0].totalLoanValue,
           TotalIncomeInterest: TotalIncomeInterest[0].totalInterestValue,
+          TotalServiceCharge: ServiceCharge[0].totalServiceCharge || 0,
         }),
         {
           status: 200,
