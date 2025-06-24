@@ -220,7 +220,7 @@ const Cashbook = () => {
 
           // Refresh data from server
           fetchTransactions();
-          fetchTodayExpenses(); // <-- Add this line to update today's expenses in real time
+          fetchTodayExpenses(); 
         } else {
           alert(`Failed to add transaction: ${result.message}`);
         }
