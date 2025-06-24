@@ -292,6 +292,8 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                   )}
                   <TableHead>Settlement</TableHead>
                   <TableHead>Paid Amount</TableHead>
+                  <TableHead>Arrears</TableHead>
+                  <TableHead>Overpayment</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -363,6 +365,18 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                           Number(payment.Totalpay) -
                           Number(payment.remainingAmount)
                         ).toLocaleString()}
+                      </TableCell>
+                      {/* Arrears */}
+                      <TableCell>
+                        {Number(payment.balance) < 0
+                          ? `LKR ${Math.abs(Number(payment.balance)).toLocaleString()}`
+                          : "-"}
+                      </TableCell>
+                      {/* Overpayment */}
+                      <TableCell>
+                        {Number(payment.balance) > 0
+                          ? `LKR ${Number(payment.balance).toLocaleString()}`
+                          : "-"}
                       </TableCell>
                       <TableCell>
                         <Button

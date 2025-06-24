@@ -32,7 +32,15 @@ export async function GET() {
            FROM repayment r 
            WHERE r.loan_bussiness_id = lb.id),
           lb.Totalpay
-        ) as remainingAmount
+        ) as remainingAmount,
+        -- Calculate balance (overpayment/arrears)
+        COALESCE((
+          SELECT r.balance
+          FROM repayment r
+          WHERE r.loan_bussiness_id = lb.id
+          ORDER BY r.id DESC
+          LIMIT 1
+        ), 0) as balance
       FROM loan_bussiness lb
       JOIN customer c ON lb.customerid = c.id
       WHERE lb.status = 'active'
@@ -45,6 +53,14 @@ export async function GET() {
         ...row,
         loanType: row.formattedLoanType,
         remainingAmount: Number(row.remainingAmount || row.Totalpay),
+        arrears:
+          Number(row.balance) < 0
+            ? Math.abs(Number(row.balance))
+            : 0,
+        overpayment:
+          Number(row.balance) > 0
+            ? Number(row.balance)
+            : 0,
       })),
     });
   } catch (error) {
