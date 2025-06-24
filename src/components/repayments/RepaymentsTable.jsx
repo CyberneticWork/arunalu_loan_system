@@ -262,8 +262,8 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
 
           {/* Table */}
           <div className="rounded-md border overflow-hidden">
-            <Table>
-              <TableHeader>
+            <Table className="min-w-full">
+              <TableHeader className="sticky top-0 bg-white z-10 shadow">
                 <TableRow>
                   <TableHead className="w-[50px]">
                     <Checkbox
@@ -368,15 +368,23 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                       </TableCell>
                       {/* Arrears */}
                       <TableCell>
-                        {Number(payment.balance) < 0
-                          ? `LKR ${Math.abs(Number(payment.balance)).toLocaleString()}`
-                          : "-"}
+                        {Number(payment.balance) < 0 ? (
+                          <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700 font-semibold">
+                            LKR {Math.abs(Number(payment.balance)).toLocaleString()}
+                          </span>
+                        ) : (
+                          "-"
+                        )}
                       </TableCell>
                       {/* Overpayment */}
                       <TableCell>
-                        {Number(payment.balance) > 0
-                          ? `LKR ${Number(payment.balance).toLocaleString()}`
-                          : "-"}
+                        {Number(payment.balance) > 0 ? (
+                          <span className="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold">
+                            LKR {Number(payment.balance).toLocaleString()}
+                          </span>
+                        ) : (
+                          "-"
+                        )}
                       </TableCell>
                       <TableCell>
                         <Button
