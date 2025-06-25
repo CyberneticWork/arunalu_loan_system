@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,8 +28,80 @@ export function GuarantorForm({
   onChange,
 }) {
   const [errors, setErrors] = useState({});
+  const [isNicCheckLoading, setIsNicCheckLoading] = useState(false);
+  const [nicExists, setNicExists] = useState(false);
+  const [originalGuarantorData, setOriginalGuarantorData] = useState(null);
+  const [isDataFetched, setIsDataFetched] = useState(false);
+
+  useEffect(() => {
+    // Reset fetched state when the form is closed and reopened
+    if (showModal) {
+      setIsDataFetched(false);
+      setOriginalGuarantorData(null);
+    }
+  }, [showModal]);
 
   if (!showModal) return null;
+
+  // Check if NIC exists in the database
+  const checkNicExists = async (nic) => {
+    if (!validateNIC(nic)) return;
+
+    setIsNicCheckLoading(true);
+    try {
+      const response = await fetch(`/api/guarantors/check-nic?nic=${nic}`);
+      const data = await response.json();
+      setNicExists(data.exists);
+    } catch (error) {
+      console.error("Error checking NIC:", error);
+    } finally {
+      setIsNicCheckLoading(false);
+    }
+  };
+
+  // Fetch guarantor data by NIC
+  const fetchGuarantorByNic = async () => {
+    setIsNicCheckLoading(true);
+    try {
+      const response = await fetch(
+        `/api/guarantors/by-nic?nic=${guarantorForm.nic}`
+      );
+      if (!response.ok) throw new Error("Failed to fetch guarantor data");
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        const guarantor = data.data;
+
+        // Store the original guarantor data for later comparison
+        setOriginalGuarantorData(guarantor);
+        setIsDataFetched(true);
+
+        onChange({
+          ...guarantorForm,
+          name: guarantor.name || "",
+          address: guarantor.address || "",
+          phone: guarantor.number || "",
+          occupation: guarantor.type || "",
+          monthlyIncome: guarantor.income || "",
+          gender: guarantor.gender,
+          dob: guarantor.dob ? guarantor.dob.split("T")[0] : "",
+          relation: guarantor.relation || "",
+          province: guarantor.province || "",
+          gs: guarantor.gs || "",
+          ds: guarantor.ds || "",
+          district: guarantor.district || "",
+          accountno: guarantor.accountno || "none",
+          bankname: guarantor.bankname || "none",
+          guarantorId: guarantor.id, // Store the ID for updating
+        });
+        setNicExists(false); // Clear exists flag after fetching
+      }
+    } catch (error) {
+      console.error("Error fetching guarantor:", error);
+    } finally {
+      setIsNicCheckLoading(false);
+    }
+  };
 
   // Single field validation
   const validateField = (field, value) => {
@@ -182,9 +254,74 @@ export function GuarantorForm({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
+      // If we fetched data and there are changes to update
+      if (isDataFetched && originalGuarantorData) {
+        try {
+          // Update the guarantor with the changed data
+          const response = await fetch("/api/guarantors/update", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              id: guarantorForm.guarantorId,
+              nic: guarantorForm.nic,
+              name: guarantorForm.name,
+              address: guarantorForm.address,
+              number: guarantorForm.phone,
+              type: guarantorForm.occupation,
+              income: guarantorForm.monthlyIncome,
+              gender: guarantorForm.gender,
+              dob: guarantorForm.dob,
+              relation: guarantorForm.relation,
+              province: guarantorForm.province,
+              gs: guarantorForm.gs,
+              ds: guarantorForm.ds,
+              district: guarantorForm.district,
+              accountno:
+                guarantorForm.accountno === "none"
+                  ? null
+                  : guarantorForm.accountno,
+              bankname:
+                guarantorForm.bankname === "none" ? null : guarantorForm.bankname,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to update guarantor");
+          }
+
+          // Clear out the fetched state for next time
+          setIsDataFetched(false);
+          setOriginalGuarantorData(null);
+        } catch (error) {
+          console.error("Error updating guarantor:", error);
+          // You could show an error message to the user here
+          alert("Error updating guarantor: " + error.message);
+          return;
+        }
+      }
+
+      // Continue with regular form submission
       onSubmit();
+    }
+  };
+
+  // Handle NIC change with debounce
+  const handleNicChange = (e) => {
+    const newNic = e.target.value;
+    onChange({ ...guarantorForm, nic: newNic });
+
+    // Clear the "exists" flag when NIC changes
+    setNicExists(false);
+    setIsDataFetched(false);
+    setOriginalGuarantorData(null);
+
+    // Check if NIC exists after a short delay
+    if (validateNIC(newNic)) {
+      checkNicExists(newNic);
     }
   };
 
@@ -194,9 +331,21 @@ export function GuarantorForm({
         <h3 className="text-xl font-semibold mb-6">
           {editingIndex !== null
             ? `Edit Guarantor ${editingIndex + 1}`
+            : isDataFetched
+            ? "Update Existing Guarantor"
             : "Add Guarantor Information"}
         </h3>
 
+        {/* Show indicator that we are working with existing data */}
+        {isDataFetched && (
+          <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-700">
+              Editing existing guarantor record. Changes will be saved to the database.
+            </p>
+          </div>
+        )}
+
+        {/* Form fields remain the same */}
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Full Name */}
@@ -218,22 +367,40 @@ export function GuarantorForm({
               )}
             </div>
 
-            {/* NIC Number */}
+            {/* NIC Number with Get Data button */}
             <div>
               <Label className="text-base">
                 NIC Number <span className="text-red-500">*</span>
               </Label>
-              <Input
-                value={guarantorForm.nic}
-                onChange={(e) =>
-                  onChange({ ...guarantorForm, nic: e.target.value })
-                }
-                onBlur={() => handleBlur("nic")}
-                placeholder="Enter NIC number"
-                className={errors.nic ? "border-red-500" : ""}
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={guarantorForm.nic}
+                  onChange={handleNicChange}
+                  onBlur={() => handleBlur("nic")}
+                  placeholder="Enter NIC number"
+                  className={errors.nic ? "border-red-500" : ""}
+                  // Disable NIC input if we've already fetched data
+                  disabled={isDataFetched}
+                />
+                {nicExists && !isDataFetched && (
+                  <Button
+                    type="button"
+                    onClick={fetchGuarantorByNic}
+                    disabled={isNicCheckLoading}
+                    className="whitespace-nowrap bg-green-600 hover:bg-green-700"
+                    size="sm"
+                  >
+                    {isNicCheckLoading ? "Loading..." : "Get Data"}
+                  </Button>
+                )}
+              </div>
               {errors.nic && (
                 <p className="text-red-500 text-xs mt-1">{errors.nic}</p>
+              )}
+              {nicExists && !isDataFetched && (
+                <p className="text-green-600 text-xs mt-1">
+                  NIC found in records
+                </p>
               )}
             </div>
 
@@ -535,7 +702,11 @@ export function GuarantorForm({
             className="bg-blue-600 hover:bg-blue-700"
             onClick={handleSubmit}
           >
-            {editingIndex !== null ? "Update Guarantor" : "Add Guarantor"}
+            {isDataFetched
+              ? "Update Guarantor"
+              : editingIndex !== null
+              ? `Update Guarantor ${editingIndex + 1}`
+              : "Add Guarantor"}
           </Button>
         </div>
       </div>
