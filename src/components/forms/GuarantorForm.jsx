@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,8 +28,64 @@ export function GuarantorForm({
   onChange,
 }) {
   const [errors, setErrors] = useState({});
+  const [isNicCheckLoading, setIsNicCheckLoading] = useState(false);
+  const [nicExists, setNicExists] = useState(false);
 
   if (!showModal) return null;
+
+  // Check if NIC exists in the database
+  const checkNicExists = async (nic) => {
+    if (!validateNIC(nic)) return;
+
+    setIsNicCheckLoading(true);
+    try {
+      const response = await fetch(`/api/guarantors/check-nic?nic=${nic}`);
+      const data = await response.json();
+      setNicExists(data.exists);
+    } catch (error) {
+      console.error("Error checking NIC:", error);
+    } finally {
+      setIsNicCheckLoading(false);
+    }
+  };
+
+  // Fetch guarantor data by NIC
+  const fetchGuarantorByNic = async () => {
+    setIsNicCheckLoading(true);
+    try {
+      const response = await fetch(
+        `/api/guarantors/by-nic?nic=${guarantorForm.nic}`
+      );
+      if (!response.ok) throw new Error("Failed to fetch guarantor data");
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        const guarantor = data.data;
+        onChange({
+          ...guarantorForm,
+          name: guarantor.name || "",
+          address: guarantor.address || "",
+          phone: guarantor.number || "",
+          occupation: guarantor.type || "",
+          monthlyIncome: guarantor.income || "",
+          gender: guarantor.gender,
+          dob: guarantor.dob ? guarantor.dob.split("T")[0] : "",
+          relation: guarantor.relation || "",
+          province: guarantor.province || "",
+          gs: guarantor.gs || "",
+          ds: guarantor.ds || "",
+          district: guarantor.district || "",
+          accountno: guarantor.accountno || "none",
+          bankname: guarantor.bankname || "none",
+        });
+        setNicExists(false); // Set exists flag if guarantor is found
+      }
+    } catch (error) {
+      console.error("Error fetching guarantor:", error);
+    } finally {
+      setIsNicCheckLoading(false);
+    }
+  };
 
   // Single field validation
   const validateField = (field, value) => {
@@ -188,6 +244,20 @@ export function GuarantorForm({
     }
   };
 
+  // Handle NIC change with debounce
+  const handleNicChange = (e) => {
+    const newNic = e.target.value;
+    onChange({ ...guarantorForm, nic: newNic });
+
+    // Clear the "exists" flag when NIC changes
+    setNicExists(false);
+
+    // Check if NIC exists after a short delay
+    if (validateNIC(newNic)) {
+      checkNicExists(newNic);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-xl">
@@ -218,22 +288,38 @@ export function GuarantorForm({
               )}
             </div>
 
-            {/* NIC Number */}
+            {/* NIC Number with Get Data button */}
             <div>
               <Label className="text-base">
                 NIC Number <span className="text-red-500">*</span>
               </Label>
-              <Input
-                value={guarantorForm.nic}
-                onChange={(e) =>
-                  onChange({ ...guarantorForm, nic: e.target.value })
-                }
-                onBlur={() => handleBlur("nic")}
-                placeholder="Enter NIC number"
-                className={errors.nic ? "border-red-500" : ""}
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={guarantorForm.nic}
+                  onChange={handleNicChange}
+                  onBlur={() => handleBlur("nic")}
+                  placeholder="Enter NIC number"
+                  className={errors.nic ? "border-red-500" : ""}
+                />
+                {nicExists && (
+                  <Button
+                    type="button"
+                    onClick={fetchGuarantorByNic}
+                    disabled={isNicCheckLoading}
+                    className="whitespace-nowrap bg-green-600 hover:bg-green-700"
+                    size="sm"
+                  >
+                    {isNicCheckLoading ? "Loading..." : "Get Data"}
+                  </Button>
+                )}
+              </div>
               {errors.nic && (
                 <p className="text-red-500 text-xs mt-1">{errors.nic}</p>
+              )}
+              {nicExists && (
+                <p className="text-green-600 text-xs mt-1">
+                  NIC found in records
+                </p>
               )}
             </div>
 
