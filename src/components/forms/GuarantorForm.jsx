@@ -285,7 +285,9 @@ export function GuarantorForm({
                   ? null
                   : guarantorForm.accountno,
               bankname:
-                guarantorForm.bankname === "none" ? null : guarantorForm.bankname,
+                guarantorForm.bankname === "none"
+                  ? null
+                  : guarantorForm.bankname,
             }),
           });
 
@@ -340,7 +342,8 @@ export function GuarantorForm({
         {isDataFetched && (
           <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded-md">
             <p className="text-sm text-blue-700">
-              Editing existing guarantor record. Changes will be saved to the database.
+              Editing existing guarantor record. Changes will be saved to the
+              database.
             </p>
           </div>
         )}
