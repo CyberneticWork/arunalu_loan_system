@@ -1,5 +1,5 @@
 "use client";
-
+import { useEffect } from "react";
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -20,10 +20,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Filter, Eye, Printer } from "lucide-react";
+import { Search, Filter, Eye, Printer, FileSpreadsheet } from "lucide-react";
 import PaymentModal from "./PaymentModal";
 import PrintPreviewTable from "./PrintPreviewTable";
 import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export default function RepaymentsTable({ data = [], onRefresh }) {
   const [selectedRecords, setSelectedRecords] = useState([]);
@@ -46,8 +55,17 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
   const [printData, setPrintData] = useState([]);
+  const [isExcelModelOpen, setIsExcelModelOpen] = useState(false);
   const router = useRouter();
 
+  // excel filter functions
+  const [excelFilters, setExcelFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    loanType: "all",
+    ownershipType: "all",
+    status: "all",
+  });
   // Filter functions
   const filterData = (data) => {
     let filtered = data.filter((payment) => {
@@ -160,7 +178,26 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
       console.error("Error fetching print data:", error);
     }
   };
+  const handleExcelModelPopup = () => {
+    setIsExcelModelOpen(true);
+  };
 
+  const [loanTypes, setLoanTypes] = useState([]);
+  // Add this function before the return statement
+  const fetchLoanTypes = async () => {
+    try {
+      const response = await fetch("/api/loan-types");
+      const data = await response.json();
+      setLoanTypes(data);
+    } catch (error) {
+      console.error("Error fetching loan types:", error);
+    }
+  };
+
+  // Add useEffect to fetch loan types when component mounts
+  useEffect(() => {
+    fetchLoanTypes();
+  }, []);
   return (
     <>
       <Card className="w-full shadow-sm">
@@ -168,15 +205,26 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
           <CardTitle className="text-xl font-semibold text-gray-800">
             Loan Repayments
           </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrintPreview}
-            className="ml-auto"
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            Print Preview
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExcelModelPopup}
+              className="ml-auto"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExcelModelPopup}
+              className="ml-auto"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print Preview
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent>
@@ -370,7 +418,8 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                       <TableCell>
                         {Number(payment.balance) < 0 ? (
                           <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700 font-semibold">
-                            LKR {Math.abs(Number(payment.balance)).toLocaleString()}
+                            LKR{" "}
+                            {Math.abs(Number(payment.balance)).toLocaleString()}
                           </span>
                         ) : (
                           "-"
@@ -473,6 +522,216 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
         onClose={() => setIsPrintPreviewOpen(false)}
         data={printData}
       />
+
+      {/* Excel Export Modal */}
+      <Dialog open={isExcelModelOpen} onOpenChange={setIsExcelModelOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Excel Report</DialogTitle>
+            <DialogDescription>
+              Select filters for your Excel export
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {/* Date Range */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="dateRange" className="text-right">
+                Date Range
+              </Label>
+              <div className="col-span-3 flex gap-2">
+                <Input
+                  type="date"
+                  value={excelFilters.dateFrom}
+                  max={new Date().toISOString().split("T")[0]} // Restricts to today or earlier
+                  onChange={(e) => {
+                    const newStartDate = e.target.value;
+                    setExcelFilters((prev) => ({
+                      ...prev,
+                      dateFrom: newStartDate,
+                      // Reset end date if it's before new start date
+                      dateTo:
+                        prev.dateTo && prev.dateTo < newStartDate
+                          ? ""
+                          : prev.dateTo,
+                    }));
+                  }}
+                  className="flex-1"
+                  placeholder="From"
+                />
+                <Input
+                  type="date"
+                  value={excelFilters.dateTo}
+                  min={
+                    excelFilters.dateFrom ||
+                    new Date().toISOString().split("T")[0]
+                  }
+                  onChange={(e) =>
+                    setExcelFilters({
+                      ...excelFilters,
+                      dateTo: e.target.value,
+                    })
+                  }
+                  className="flex-1"
+                  placeholder="To"
+                  disabled={!excelFilters.dateFrom} // Disable until start date is selected
+                />
+              </div>
+            </div>
+
+            {/* Loan Type */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="loanType" className="text-right">
+                Loan Type
+              </Label>
+              <Select
+                value={excelFilters.loanType}
+                onValueChange={(value) =>
+                  setExcelFilters({
+                    ...excelFilters,
+                    loanType: value,
+                  })
+                }
+                className="col-span-3"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select loan type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {loanTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Ownership Type */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="ownershipType" className="text-right">
+                Ownership Type
+              </Label>
+              <Select
+                value={excelFilters.ownershipType}
+                onValueChange={(value) =>
+                  setExcelFilters({
+                    ...excelFilters,
+                    ownershipType: value,
+                  })
+                }
+                className="col-span-3"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select ownership type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="group">Group</SelectItem>
+                  <SelectItem value="individual">Individual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="status" className="text-right">
+                Status
+              </Label>
+              <Select
+                value={excelFilters.status}
+                onValueChange={(value) =>
+                  setExcelFilters({
+                    ...excelFilters,
+                    status: value,
+                  })
+                }
+                className="col-span-3"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="sm:justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsExcelModelOpen(false);
+                setExcelFilters({
+                  dateFrom: "",
+                  dateTo: "",
+                  loanType: "all",
+                  ownershipType: "all",
+                  status: "all",
+                });
+              }}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="button"
+              onClick={async () => {
+                try {
+                  // Show loading state
+                  const response = await fetch("/api/repayments/export-excel", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(excelFilters),
+                  });
+
+                  if (!response.ok) {
+                    throw new Error("Export failed");
+                  }
+
+                  // Convert response to blob
+                  const blob = await response.blob();
+
+                  // Create download link
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `repayments-report-${
+                    new Date().toISOString().split("T")[0]
+                  }.xlsx`;
+                  document.body.appendChild(a);
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  document.body.removeChild(a);
+
+                  // Close modal
+                  setIsExcelModelOpen(false);
+
+                  // Reset filters
+                  setExcelFilters({
+                    dateFrom: "",
+                    dateTo: "",
+                    loanType: "all",
+                    ownershipType: "all",
+                    status: "all",
+                  });
+                } catch (error) {
+                  console.error("Export error:", error);
+                  // Add error notification here if you have a notification system
+                }
+              }}
+            >
+              Download Excel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
