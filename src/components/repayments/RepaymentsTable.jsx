@@ -683,26 +683,28 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
               onClick={async () => {
                 try {
                   // Show loading state
-                  const response = await fetch('/api/repayments/export-excel', {
-                    method: 'POST',
+                  const response = await fetch("/api/repayments/export-excel", {
+                    method: "POST",
                     headers: {
-                      'Content-Type': 'application/json',
+                      "Content-Type": "application/json",
                     },
                     body: JSON.stringify(excelFilters),
                   });
 
                   if (!response.ok) {
-                    throw new Error('Export failed');
+                    throw new Error("Export failed");
                   }
 
                   // Convert response to blob
                   const blob = await response.blob();
-                  
+
                   // Create download link
                   const url = window.URL.createObjectURL(blob);
-                  const a = document.createElement('a');
+                  const a = document.createElement("a");
                   a.href = url;
-                  a.download = `repayments-report-${new Date().toISOString().split('T')[0]}.xlsx`;
+                  a.download = `repayments-report-${
+                    new Date().toISOString().split("T")[0]
+                  }.xlsx`;
                   document.body.appendChild(a);
                   a.click();
                   window.URL.revokeObjectURL(url);
@@ -710,7 +712,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
 
                   // Close modal
                   setIsExcelModelOpen(false);
-                  
+
                   // Reset filters
                   setExcelFilters({
                     dateFrom: "",
@@ -720,7 +722,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                     status: "all",
                   });
                 } catch (error) {
-                  console.error('Export error:', error);
+                  console.error("Export error:", error);
                   // Add error notification here if you have a notification system
                 }
               }}
