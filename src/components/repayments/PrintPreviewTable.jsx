@@ -7,13 +7,20 @@ import jsPDF from "jspdf";
 
 export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
   const [filter, setFilter] = useState("all");
+  const [loanTypeFilter, setLoanTypeFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
 
   if (!isOpen) return null;
 
   const filteredData = data.filter((item) => {
-    if (filter === "all") return true;
-    if (filter === "group") return item.loanTypeMode === "group";
-    if (filter === "individual") return item.loanTypeMode === "normal";
+    if (filter === "group" && item.loanTypeMode !== "group") return false;
+    if (filter === "individual" && item.loanTypeMode !== "normal") return false;
+    if (loanTypeFilter && item.loanType !== loanTypeFilter) return false;
+    if (
+      typeFilter &&
+      (!item.type || item.type.toLowerCase() !== typeFilter.toLowerCase())
+    )
+      return false;
     return true;
   });
 
@@ -90,7 +97,8 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 Member Name
               </th>
               <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
-                Contact
+                {/* New column header */}
+                Loan Type (Type)
               </th>
               <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
                 Installment / Term
@@ -126,8 +134,11 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 <td className="border border-gray-200 px-4 py-3">
                   {!item.isEmpty ? item.customer_name : ""}
                 </td>
-                <td className="border border-gray-200 px-4 py-3 font-mono text-sm">
-                  {!item.isEmpty ? item.contact : ""}
+                <td className="border border-gray-200 px-4 py-3">
+                  {/* New combined column */}
+                  {!item.isEmpty
+                    ? `${item.loanType || ""}${item.type ? ` (${item.type})` : ""}`
+                    : ""}
                 </td>
                 <td className="border border-gray-200 px-4 py-3 font-mono text-sm">
                   {!item.isEmpty ? `${item.installment} × ${item.term}` : ""}
@@ -248,6 +259,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
       const columns = [
         { header: "Group Name", width: 25 },
         { header: "Member Name", width: 35 },
+        { header: "Loan Type (Type)", width: 35 }, // New column
         { header: "Contact", width: 25 },
         { header: "Installment / Term", width: 30 },
         { header: "Loan Amount", width: 30 },
@@ -304,20 +316,24 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 text = item.customer_name || "";
                 break;
               case 2:
-                text = item.contact || "";
+                text = (item.loanType || "") + (item.type ? ` (${item.type})` : "");
                 break;
               case 3:
+                text = item.contact || "";
+                break;
+              case 4:
+               
                 text =
                   item.installment && item.term
                     ? `${item.installment} × ${item.term}`
                     : "";
                 break;
-              case 4:
+              case 5:
                 text = item.Totalpay
                   ? `LKR ${Number(item.Totalpay).toLocaleString()}`
                   : "";
                 break;
-              case 5:
+              case 6:
                 text = item.Outstanding_amount
                   ? `LKR ${Number(item.Outstanding_amount).toLocaleString()}`
                   : "";
@@ -440,6 +456,28 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 Individual
               </button>
             </div>
+            {/* New Loan Type Filter */}
+            <select
+              value={loanTypeFilter}
+              onChange={(e) => setLoanTypeFilter(e.target.value)}
+              className="px-2 py-1 border rounded text-sm"
+            >
+              <option value="">All Loan Types</option>
+              {[...new Set(data.map((d) => d.loanType).filter(Boolean))].map((lt) => (
+                <option key={lt} value={lt}>{lt}</option>
+              ))}
+            </select>
+            {/* New Type Filter */}
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="px-2 py-1 border rounded text-sm"
+            >
+              <option value="">All Types</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
             <div className="flex gap-2">
               <button
                 onClick={generatePDF}
