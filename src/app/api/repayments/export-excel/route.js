@@ -1,61 +1,268 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
+import { connectDB } from "@/lib/db";
 
 async function generateExcelReport(filters) {
+  let connection;
   try {
-    // Sample data for testing
-    const sampleData = [
-      {
-        date: "2025-06-26",
-        customerName: "John Doe",
-        telno: "1234567890",
-        location: "Branch A",
-        gs: "Center 1",
-        ds: "DS Office 1",
-        loanType: "Business",
-        loanTypeMode: "Individual",
-        Totalpay: 50000,
-        remainingAmount: 30000,
-        rate: 12,
-        status: "Active",
-      },
-      {
-        date: "2025-06-26",
-        customerName: "Jane Smith",
-        telno: "0987654321",
-        location: "Branch B",
-        gs: "Center 2",
-        ds: "DS Office 2",
-        loanType: "Micro",
-        loanTypeMode: "Group",
-        Totalpay: 75000,
-        remainingAmount: 45000,
-        rate: 15,
-        status: "Active",
-      },
-    ];
+    // Connect to database
+    connection = await connectDB();
 
+    // Build query with filters - enhanced to get all needed fields
+    let query = `
+      SELECT 
+        lb.*, 
+        c.fullname as fullname,
+        r.paid_amount,
+        r.TotInterest as interest_paid,
+        (r.paid_amount + r.TotInterest) as total_paid,
+        latest.balance,
+        CASE 
+          WHEN latest.balance < 0 THEN ABS(latest.balance)
+          ELSE 0 
+        END as arrears,
+        CASE 
+          WHEN latest.balance > 0 THEN latest.balance
+          ELSE 0 
+        END as over_payment,
+        lb.activate_date as activate_date,
+        COUNT(rp.id) as payment_count,
+        lb.Installment as installment,
+        lb.last_payment as last_payment,
+        latest.paymentCount as latest_payment_count
+      FROM loan_bussiness lb
+      LEFT JOIN customer c ON lb.customerid = c.id
+      LEFT JOIN (
+        SELECT 
+          loan_bussiness_id, 
+          SUM(paid_amount) as paid_amount,
+          SUM(TotInterest) as TotInterest
+        FROM repayment
+        GROUP BY loan_bussiness_id
+      ) r ON r.loan_bussiness_id = lb.id
+      LEFT JOIN repayment rp ON rp.loan_bussiness_id = lb.id
+      LEFT JOIN (
+        SELECT r1.*
+        FROM repayment r1
+        INNER JOIN (
+          SELECT loan_bussiness_id, MAX(paymentCount) as max_payment
+          FROM repayment
+          GROUP BY loan_bussiness_id
+        ) r2 ON r1.loan_bussiness_id = r2.loan_bussiness_id AND r1.paymentCount = r2.max_payment
+      ) latest ON latest.loan_bussiness_id = lb.id
+      WHERE 1=1
+    `;
+
+    const queryParams = [];
+
+    if (filters.dateFrom && filters.dateTo) {
+      query += ` AND lb.addat BETWEEN ? AND ?`;
+      queryParams.push(
+        `${filters.dateFrom} 00:00:00`,
+        `${filters.dateTo} 23:59:59`
+      );
+    }
+
+    if (filters.status && filters.status !== "all") {
+      query += ` AND lb.status = ?`;
+      queryParams.push(filters.status);
+    }
+
+    if (filters.ownershipType && filters.ownershipType !== "all") {
+      query += ` AND lb.loanTypeMode = ?`;
+      queryParams.push(filters.ownershipType);
+    }
+
+    if (filters.loanType && filters.loanType !== "all") {
+      query += ` AND lb.loanType = ?`;
+      queryParams.push(filters.loanType);
+    }
+
+    // Add GROUP BY clause for counting payments
+    query += ` GROUP BY lb.id`;
+
+    // Execute query
+    const [rows] = await connection.query(query, queryParams);
+
+    // Create workbook and sheet
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Repayments Report");
 
-    // Define columns
+    // Rearrange columns and modify row mapping:
     worksheet.columns = [
-      { header: "Date", key: "date", width: 15 },
-      { header: "Customer Name", key: "customerName", width: 20 },
-      { header: "Contact No", key: "telno", width: 15 },
-      { header: "Branch", key: "location", width: 15 },
-      { header: "Center", key: "gs", width: 15 },
-      { header: "DS Office", key: "ds", width: 15 },
-      { header: "Loan Type", key: "loanType", width: 15 },
-      { header: "Payment Mode", key: "loanTypeMode", width: 15 },
-      { header: "Total Amount", key: "Totalpay", width: 15 },
-      { header: "Settlement", key: "remainingAmount", width: 15 },
-      { header: "Interest Rate", key: "rate", width: 15 },
-      { header: "Status", key: "status", width: 15 },
+      { header: "Date", key: "date", width: 12 }, // Date = lb.addat
+      { header: "Customer Name", key: "fullname", width: 20 }, // Customer Name = c.fullname
+
+      { header: "Group", key: "group", width: 12 }, // Group = lb.loanTypeMode
+      { header: "Center", key: "center", width: 12 }, // Center = lb.location
+
+      { header: "Loan Amount", key: "loanAmount", width: 12 }, // Loan Amount = lb.loanAmount
+      { header: "Loan Term", key: "term", width: 10 }, // lb.term
+      { header: "Loan Installment", key: "loanInstallment", width: 15 }, // = lb.Totalpay / lb.term
+
+      { header: "Service Charge", key: "serviceCharge", width: 12 }, // = lb.serviceCharge
+
+      { header: "Total Outstanding", key: "outstanding", width: 12 }, // like printPreview.jsx "Outstanding"
+
+      { header: "Paid Amount", key: "paidAmount", width: 12 }, // from repayment with highest paymentCount
+
+      { header: "Total Capital", key: "totalCapital", width: 12 }, // sum of bank + cash from cashbook
+
+      { header: "Total Interest", key: "totalInterest", width: 12 }, // sum of TotalInt in cashbook
+
+      { header: "Interest Income", key: "interestIncome", width: 12 }, // = (Totalpay - loanAmount) / term
+
+      { header: "Paid Interest Income", key: "paidInterestIncome", width: 12 }, // sum of repayment.TotInterest in cashbook
+
+      { header: "Arrears", key: "arrears", width: 12 }, // sum of negative repayment.balance
+
+      { header: "Over Payment", key: "overPayment", width: 12 }, // sum of positive repayment.balance
+
+      { header: "Due Date", key: "dueDate", width: 12 }, // today - lastPaymentDate in repayment
     ];
 
+    // Format database rows to match expected structure with clearer mapping
+    const formattedData = rows.map((row) => {
+      // 1. date = lb.addat
+      const dateValue = row.addat
+        ? new Date(row.addat).toISOString().split("T")[0]
+        : "";
+
+      // 2. center = lb.location
+      const centerValue = row.location || "";
+
+      // 3. group = lb.loanTypeMode
+      const groupValue = row.loanTypeMode || "normal";
+
+      // 4. fullname = c.fullname
+      const customerName = row.fullname || "";
+
+      // 5. loanAmount = lb.loanAmount
+      const loanAmount = row.loanAmount || 0;
+
+      // 6. loanInstallment = lb.Totalpay / lb.term
+      let installmentVal = 0;
+      if (row.Totalpay && row.term) {
+        const termNumber = parseFloat(row.term) || 1;
+        installmentVal = parseFloat(row.Totalpay) / termNumber;
+      }
+
+      // 7. serviceCharge = lb.serviceCharge
+      const serviceChargeVal = row.serviceCharge || 0;
+
+      // 8. totalOutstanding = like printPreview.jsx "Outstanding"
+      //   (example) = row.Totalpay - row.paid_amount
+      const totalOutstandingVal = (row.Totalpay || 0) - (row.paid_amount || 0);
+
+      // 9. paidAmount = from repayment with highest paymentCount
+      //   (this example just uses row.paid_amount)
+      const paidAmountVal = row.paid_amount || 0;
+
+      // 10. totalCapital = sum of bank + cash from cashbook
+      //   (this would require a separate query; placeholder here)
+      const totalCapitalVal = 0; // placeholder
+
+      // 11. totalInterest = sum of TotalInt in cashbook
+      const totalInterestVal = 0; // placeholder
+
+      // 12. interestIncome = (Totalpay - loanAmount) / term
+      let interestIncomeVal = 0;
+      if (row.Totalpay && row.loanAmount && row.term) {
+        const termNumber = parseFloat(row.term) || 1;
+        interestIncomeVal =
+          (parseFloat(row.Totalpay) - parseFloat(row.loanAmount)) / termNumber;
+      }
+
+      // 13. paidInterestIncome = sum of TotInterest in cashbook
+      const paidInterestIncomeVal = row.interest_paid || 0;
+
+      // 14. arrears = get from the latest payment (with maximum paymentCount)
+      const arrearsVal = row.arrears || 0;
+
+      // 15. overPayment = get from the latest payment (with maximum paymentCount)
+      const overPaymentVal = row.over_payment || 0;
+
+      // 16. loanTerm = lb.term
+      const termVal = row.term || "";
+
+      // 17. dueDate = days between last payment and today
+      let dueDateVal = "";
+
+      if (row.last_payment) {
+        // Calculate due date based on last_payment column
+        const lastPaymentDate = new Date(row.last_payment);
+        const today = new Date();
+
+        // Calculate days difference based on loan type
+        if (row.type && row.type.toLowerCase() === "daily") {
+          const daysDiff = Math.floor(
+            (today - lastPaymentDate) / (1000 * 60 * 60 * 24)
+          );
+          dueDateVal = daysDiff > 0 ? daysDiff.toString() : "";
+        } else if (row.type && row.type.toLowerCase() === "weekly") {
+          const daysDiff = Math.floor(
+            (today - lastPaymentDate) / (1000 * 60 * 60 * 24)
+          );
+          const weeksDiff = Math.floor(daysDiff / 7);
+          dueDateVal = weeksDiff > 0 ? weeksDiff.toString() : "";
+        } else {
+          // Monthly
+          const months =
+            (today.getFullYear() - lastPaymentDate.getFullYear()) * 12 +
+            (today.getMonth() - lastPaymentDate.getMonth());
+          dueDateVal = months > 0 ? months.toString() : "";
+        }
+      } else if (row.activate_date) {
+        // If no last_payment recorded, use activate_date
+        const activateDate = new Date(row.activate_date);
+        const today = new Date();
+
+        // Calculate based on loan type
+        if (row.type && row.type.toLowerCase() === "daily") {
+          const daysSinceActivation = Math.floor(
+            (today - activateDate) / (1000 * 60 * 60 * 24)
+          );
+          dueDateVal =
+            daysSinceActivation > 0 ? daysSinceActivation.toString() : "";
+        } else if (row.type && row.type.toLowerCase() === "weekly") {
+          const daysSinceActivation = Math.floor(
+            (today - activateDate) / (1000 * 60 * 60 * 24)
+          );
+          const weeksSinceActivation = Math.floor(daysSinceActivation / 7);
+          dueDateVal =
+            weeksSinceActivation > 0 ? weeksSinceActivation.toString() : "";
+        } else {
+          // Monthly
+          const months =
+            (today.getFullYear() - activateDate.getFullYear()) * 12 +
+            (today.getMonth() - activateDate.getMonth());
+          dueDateVal = months > 0 ? months.toString() : "";
+        }
+      }
+
+      return {
+        date: dateValue,
+        center: centerValue,
+        group: groupValue,
+        fullname: customerName,
+        loanAmount: loanAmount,
+        loanInstallment: installmentVal,
+        serviceCharge: serviceChargeVal,
+        outstanding: totalOutstandingVal,
+        paidAmount: paidAmountVal,
+        totalCapital: totalCapitalVal,
+        totalInterest: totalInterestVal,
+        interestIncome: interestIncomeVal,
+        paidInterestIncome: paidInterestIncomeVal,
+        arrears: arrearsVal,
+        overPayment: overPaymentVal,
+        term: termVal,
+        dueDate: dueDateVal,
+      };
+    });
+
     // Add rows
-    worksheet.addRows(sampleData);
+    worksheet.addRows(formattedData);
 
     // Style the header row
     worksheet.getRow(1).font = { bold: true };
@@ -65,9 +272,22 @@ async function generateExcelReport(filters) {
       fgColor: { argb: "FFE0E0E0" },
     };
 
-    // Format number columns
+    // Format number columns with currency
     worksheet.columns.forEach((column) => {
-      if (["Totalpay", "remainingAmount"].includes(column.key)) {
+      if (
+        [
+          "loanAmount",
+          "serviceCharge",
+          "Totalpay",
+          "paidAmount",
+          "totalCapital",
+          "totalInterest",
+          "interestPaid",
+          "totalPaid",
+          "arrears",
+          "overPayment",
+        ].includes(column.key)
+      ) {
         column.numFmt = "#,##0.00";
       }
     });
@@ -76,14 +296,66 @@ async function generateExcelReport(filters) {
   } catch (error) {
     console.error("Excel generation error:", error);
     throw error;
+  } finally {
+    if (connection) {
+      // Close database connection
+      await connection.end();
+    }
   }
+}
+
+// Function to calculate due date as number of overdue days
+function calculateDueDate(activateDate, term, type, paymentCount, status) {
+  if (!activateDate || !term || !type || status !== "active") {
+    return "";
+  }
+
+  // Parse term to get the number
+  const termNumber = parseInt(term.match(/\d+/)[0] || 0);
+
+  // If all payments are done, return empty string (no due date)
+  if (paymentCount >= termNumber) {
+    return "";
+  }
+
+  const startDate = new Date(activateDate);
+  const currentDate = new Date();
+
+  // Calculate expected payments based on time passed
+  let expectedPayments = 0;
+
+  if (type && type.toLowerCase() === "daily") {
+    // For daily loans, calculate days since start
+    const daysSinceStart = Math.floor(
+      (currentDate - startDate) / (24 * 60 * 60 * 1000)
+    );
+    expectedPayments = Math.min(daysSinceStart, termNumber);
+  } else if (type && type.toLowerCase() === "weekly") {
+    // For weekly loans, calculate weeks since start
+    const weeksSinceStart = Math.floor(
+      (currentDate - startDate) / (7 * 24 * 60 * 60 * 1000)
+    );
+    expectedPayments = Math.min(weeksSinceStart, termNumber);
+  } else {
+    // For monthly loans (default), calculate months since start
+    const monthsSinceStart =
+      (currentDate.getFullYear() - startDate.getFullYear()) * 12 +
+      currentDate.getMonth() -
+      startDate.getMonth();
+    expectedPayments = Math.min(monthsSinceStart, termNumber);
+  }
+
+  // Calculate overdue payments (expected minus actual)
+  const overduePayments = Math.max(0, expectedPayments - paymentCount);
+
+  // Return the number of overdue payments
+  return overduePayments > 0 ? overduePayments.toString() : "";
 }
 
 export async function POST(request) {
   try {
     const filters = await request.json();
     const excelBuffer = await generateExcelReport(filters);
-
     const headers = {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
