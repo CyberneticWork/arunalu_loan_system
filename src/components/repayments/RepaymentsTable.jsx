@@ -599,7 +599,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
                   {loanTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id.toString()}>
+                    <SelectItem key={type.id} value={type.name.toString()}>
                       {type.name}
                     </SelectItem>
                   ))}
@@ -628,7 +628,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
                   <SelectItem value="group">Group</SelectItem>
-                  <SelectItem value="individual">Individual</SelectItem>
+                  <SelectItem value="normal">Individual</SelectItem>
                 </SelectContent>
               </Select>
             </div>

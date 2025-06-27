@@ -1,47 +1,56 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
+import { connectDB } from "@/lib/db";
 
 async function generateExcelReport(filters) {
+  let connection;
   try {
-    // Sample data for testing
-    const sampleData = [
-      {
-        date: "2025-06-26",
-        customerName: "John Doe",
-        telno: "1234567890",
-        location: "Branch A",
-        gs: "Center 1",
-        ds: "DS Office 1",
-        loanType: "Business",
-        loanTypeMode: "Individual",
-        Totalpay: 50000,
-        remainingAmount: 30000,
-        rate: 12,
-        status: "Active",
-      },
-      {
-        date: "2025-06-26",
-        customerName: "Jane Smith",
-        telno: "0987654321",
-        location: "Branch B",
-        gs: "Center 2",
-        ds: "DS Office 2",
-        loanType: "Micro",
-        loanTypeMode: "Group",
-        Totalpay: 75000,
-        remainingAmount: 45000,
-        rate: 15,
-        status: "Active",
-      },
-    ];
+    // Connect to database
+    connection = await connectDB();
 
+    // Build query with filters
+    let query = `
+      SELECT lb.*, c.fullname as fullname, c.telno 
+      FROM loan_bussiness lb
+      LEFT JOIN customer c ON lb.customerid = c.id
+      WHERE 1=1
+    `;
+    const queryParams = [];
+
+    if (filters.dateFrom && filters.dateTo) {
+      query += ` AND lb.addat BETWEEN ? AND ?`;
+      queryParams.push(
+        `${filters.dateFrom} 00:00:00`,
+        `${filters.dateTo} 23:59:59`
+      );
+    }
+
+    if (filters.status && filters.status !== "all") {
+      query += ` AND lb.status = ?`;
+      queryParams.push(filters.status);
+    }
+
+    if (filters.ownershipType && filters.ownershipType !== "all") {
+      query += ` AND lb.loanTypeMode = ?`;
+      queryParams.push(filters.ownershipType);
+    }
+
+    if (filters.loanType && filters.loanType !== "all") {
+      query += ` AND lb.loanType = ?`;
+      queryParams.push(filters.loanType);
+    }
+
+    // Execute query
+    const [rows] = await connection.query(query, queryParams);
+
+    // Create workbook and sheet
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Repayments Report");
 
     // Define columns
     worksheet.columns = [
       { header: "Date", key: "date", width: 15 },
-      { header: "Customer Name", key: "customerName", width: 20 },
+      { header: "Customer Name", key: "fullname", width: 20 },
       { header: "Contact No", key: "telno", width: 15 },
       { header: "Branch", key: "location", width: 15 },
       { header: "Center", key: "gs", width: 15 },
@@ -54,8 +63,26 @@ async function generateExcelReport(filters) {
       { header: "Status", key: "status", width: 15 },
     ];
 
+    // Format database rows to match expected structure
+    const formattedData = rows.map((row) => ({
+      date: row.addat ? new Date(row.addat).toISOString().split("T")[0] : "",
+      fullname: row.fullname || "",
+      telno: row.telno || "",
+      location: row.location || "",
+      gs: row.gs || "",
+      ds: row.ds || "",
+      loanType: row.loanType || "",
+      loanTypeMode: row.loanTypeMode || "",
+      Totalpay: row.Totalpay || 0,
+      // Calculate remaining amount (assuming it's Totalpay minus credit_balance)
+      remainingAmount:
+        parseFloat(row.Totalpay || 0) - parseFloat(row.credit_balance || 0),
+      rate: row.rate || 0,
+      status: row.status || "",
+    }));
+
     // Add rows
-    worksheet.addRows(sampleData);
+    worksheet.addRows(formattedData);
 
     // Style the header row
     worksheet.getRow(1).font = { bold: true };
@@ -76,6 +103,11 @@ async function generateExcelReport(filters) {
   } catch (error) {
     console.error("Excel generation error:", error);
     throw error;
+  } finally {
+    if (connection) {
+      // Close database connection
+      await connection.end();
+    }
   }
 }
 
@@ -83,7 +115,6 @@ export async function POST(request) {
   try {
     const filters = await request.json();
     const excelBuffer = await generateExcelReport(filters);
-
     const headers = {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
