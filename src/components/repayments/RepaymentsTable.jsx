@@ -218,7 +218,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleExcelModelPopup}
+              onClick={handlePrintPreview}
               className="ml-auto"
             >
               <Printer className="h-4 w-4 mr-2" />
