@@ -5,14 +5,70 @@ import { connectDB } from "@/lib/db";
 async function generateExcelReport(filters) {
   let connection;
   try {
-    // Connect to database
     connection = await connectDB();
+
+    // 1. Get cash and bank values from cashbook
+    const [cashRows] = await connection.execute(`
+    SELECT (
+    SUM(CASE 
+        WHEN (type = 'income' OR type = 'withdrawal') AND method = 'cash' 
+        THEN amount 
+        WHEN type = 'loan' AND method = 'cash'
+        THEN -amount
+        ELSE 0 
+    END)
+    - SUM(CASE 
+        WHEN type = 'deposit' AND method = 'cash' 
+        THEN amount 
+        ELSE 0 
+    END)
+    - SUM(CASE
+        WHEN type = 'expense' AND method = 'cash'
+        THEN amount
+        ELSE 0
+    END)
+  ) AS NetCashAmount
+  FROM cashbook;
+    `);
+
+    const [bankRows] = await connection.execute(`
+       SELECT (
+    SUM(CASE 
+        WHEN (type = 'income' OR type = 'withdrawal') AND method = 'bank' 
+        THEN amount 
+        ELSE 0 
+    END)
+    - SUM(CASE 
+        WHEN type = 'deposit' AND method = 'bank' 
+        THEN amount 
+        ELSE 0 
+    END)
+    - SUM(CASE
+        WHEN type = 'expense' AND method = 'bank'
+        THEN amount
+        ELSE 0
+    END)
+  ) AS NetBankAmount
+  FROM cashbook;
+    `);
+
+    // 2. Get total interest from cashbook (if you store interest as TotalInt)
+    const [interestRows] = await connection.execute(`
+      SELECT SUM(TotalInt) as totalInterest FROM cashbook WHERE TotalInt IS NOT NULL
+
+    `);
+
+    const totalCash = cashRows[0].NetCashAmount || 0;
+    const totalBank = bankRows[0].NetBankAmount || 0;
+    const totalCapital = Number(totalCash) + Number(totalBank);
+    const totalInterest = interestRows[0].totalInterest || 0;
 
     // Build query with filters - enhanced to get all needed fields
     let query = `
       SELECT 
         lb.*, 
         c.fullname as fullname,
+        lb.group_name,
         r.paid_amount,
         r.TotInterest as interest_paid,
         (r.paid_amount + r.TotInterest) as total_paid,
@@ -90,35 +146,34 @@ async function generateExcelReport(filters) {
 
     // Rearrange columns and modify row mapping:
     worksheet.columns = [
-      { header: "Date", key: "date", width: 12 }, // Date = lb.addat
-      { header: "Customer Name", key: "fullname", width: 20 }, // Customer Name = c.fullname
+      { header: "Date", key: "date", width: 12 },
+      { header: "Customer Name", key: "fullname", width: 20 },
+      { header: "Group", key: "group_name", width: 12 }, // <-- changed
+      { header: "Center", key: "center", width: 12 },
 
-      { header: "Group", key: "group", width: 12 }, // Group = lb.loanTypeMode
-      { header: "Center", key: "center", width: 12 }, // Center = lb.location
+      { header: "Loan Amount", key: "loanAmount", width: 12 },
+      { header: "Loan Term", key: "term", width: 10 },
+      { header: "Loan Installment", key: "loanInstallment", width: 15 },
 
-      { header: "Loan Amount", key: "loanAmount", width: 12 }, // Loan Amount = lb.loanAmount
-      { header: "Loan Term", key: "term", width: 10 }, // lb.term
-      { header: "Loan Installment", key: "loanInstallment", width: 15 }, // = lb.Totalpay / lb.term
+      { header: "Service Charge", key: "serviceCharge", width: 12 },
 
-      { header: "Service Charge", key: "serviceCharge", width: 12 }, // = lb.serviceCharge
+      { header: "Total Outstanding", key: "outstanding", width: 12 },
 
-      { header: "Total Outstanding", key: "outstanding", width: 12 }, // like printPreview.jsx "Outstanding"
+      { header: "Paid Amount", key: "paidAmount", width: 12 },
 
-      { header: "Paid Amount", key: "paidAmount", width: 12 }, // from repayment with highest paymentCount
+      { header: "Total Capital", key: "totalCapital", width: 12 },
 
-      { header: "Total Capital", key: "totalCapital", width: 12 }, // sum of bank + cash from cashbook
+      { header: "Total Interest", key: "totalInterest", width: 12 },
 
-      { header: "Total Interest", key: "totalInterest", width: 12 }, // sum of TotalInt in cashbook
+      { header: "Interest Income", key: "interestIncome", width: 12 },
 
-      { header: "Interest Income", key: "interestIncome", width: 12 }, // = (Totalpay - loanAmount) / term
+      { header: "Paid Interest Income", key: "paidInterestIncome", width: 12 },
 
-      { header: "Paid Interest Income", key: "paidInterestIncome", width: 12 }, // sum of repayment.TotInterest in cashbook
+      { header: "Arrears", key: "arrears", width: 12 },
 
-      { header: "Arrears", key: "arrears", width: 12 }, // sum of negative repayment.balance
+      { header: "Over Payment", key: "overPayment", width: 12 },
 
-      { header: "Over Payment", key: "overPayment", width: 12 }, // sum of positive repayment.balance
-
-      { header: "Due Date", key: "dueDate", width: 12 }, // today - lastPaymentDate in repayment
+      { header: "Due Date", key: "dueDate", width: 12 },
     ];
 
     // Format database rows to match expected structure with clearer mapping
@@ -132,7 +187,11 @@ async function generateExcelReport(filters) {
       const centerValue = row.location || "";
 
       // 3. group = lb.loanTypeMode
-      const groupValue = row.loanTypeMode || "normal";
+      const groupValue = row.group_name
+        ? `group(${row.group_name})`
+        : row.loanTypeMode === "group"
+        ? "group"
+        : "normal";
 
       // 4. fullname = c.fullname
       const customerName = row.fullname || "";
@@ -160,10 +219,8 @@ async function generateExcelReport(filters) {
 
       // 10. totalCapital = sum of bank + cash from cashbook
       //   (this would require a separate query; placeholder here)
-      const totalCapitalVal = 0; // placeholder
-
-      // 11. totalInterest = sum of TotalInt in cashbook
-      const totalInterestVal = 0; // placeholder
+      const totalCapitalVal = totalCapital; // use the value from above
+      const totalInterestVal = totalInterest; // use the value from above
 
       // 12. interestIncome = (Totalpay - loanAmount) / term
       let interestIncomeVal = 0;
@@ -243,7 +300,7 @@ async function generateExcelReport(filters) {
       return {
         date: dateValue,
         center: centerValue,
-        group: groupValue,
+        group_name: groupValue, // <-- changed
         fullname: customerName,
         loanAmount: loanAmount,
         loanInstallment: installmentVal,

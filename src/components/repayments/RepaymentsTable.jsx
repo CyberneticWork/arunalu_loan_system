@@ -342,6 +342,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                   <TableHead>Paid Amount</TableHead>
                   <TableHead>Arrears</TableHead>
                   <TableHead>Overpayment</TableHead>
+                  <TableHead>Due Days</TableHead> 
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -430,6 +431,16 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                         {Number(payment.balance) > 0 ? (
                           <span className="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold">
                             LKR {Number(payment.balance).toLocaleString()}
+                          </span>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      {/* Due Days */}
+                      <TableCell>
+                        {payment.dueDays && payment.dueDays !== "0" ? (
+                          <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700 font-semibold">
+                            {payment.dueDays} Days
                           </span>
                         ) : (
                           "-"
