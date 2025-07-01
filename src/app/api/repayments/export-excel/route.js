@@ -217,10 +217,15 @@ async function generateExcelReport(filters) {
       //   (this example just uses row.paid_amount)
       const paidAmountVal = row.paid_amount || 0;
 
-      // 10. totalCapital = sum of bank + cash from cashbook
-      //   (this would require a separate query; placeholder here)
-      const totalCapitalVal = totalCapital; // use the value from above
-      const totalInterestVal = totalInterest; // use the value from above
+      // Calculate principal paid and interest paid
+      const principalPaid = row.paid_amount || 0;
+      const interestPaid = row.interest_paid || 0;
+
+      // Calculate total capital (remaining principal)
+      const totalCapitalVal = (row.loanAmount || 0) - principalPaid;
+
+      // Calculate total interest (do not subtract paid interest)
+      const totalInterestVal = (row.Totalpay || 0) - (row.loanAmount || 0);
 
       // 12. interestIncome = (Totalpay - loanAmount) / term
       let interestIncomeVal = 0;
