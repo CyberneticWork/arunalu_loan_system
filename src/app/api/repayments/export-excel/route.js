@@ -165,7 +165,7 @@ async function generateExcelReport(filters) {
 
       { header: "Total Interest", key: "totalInterest", width: 12 },
 
-      { header: "Interest Income", key: "interestIncome", width: 12 },
+      { header: "Oustanding Interest", key: "interestIncome", width: 12 },
 
       { header: "Paid Interest Income", key: "paidInterestIncome", width: 12 },
 
