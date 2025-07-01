@@ -214,7 +214,7 @@ async function generateExcelReport(filters) {
       const totalOutstandingVal = (row.Totalpay || 0) - (row.paid_amount || 0);
 
       // 9. paidAmount = from repayment with highest paymentCount
-      //   (this example just uses row.paid_amount)
+    
       const paidAmountVal = row.paid_amount || 0;
 
       // Calculate principal paid and interest paid
@@ -222,18 +222,13 @@ async function generateExcelReport(filters) {
       const interestPaid = row.interest_paid || 0;
 
       // Calculate total capital (remaining principal)
-      const totalCapitalVal = (row.loanAmount || 0) - principalPaid;
+      const totalCapitalVal = (row.loanAmount || 0) - (row.paid_amount-row.interest_paid || 0);
 
       // Calculate total interest (do not subtract paid interest)
       const totalInterestVal = (row.Totalpay || 0) - (row.loanAmount || 0);
 
-      // 12. interestIncome = (Totalpay - loanAmount) / term
-      let interestIncomeVal = 0;
-      if (row.Totalpay && row.loanAmount && row.term) {
-        const termNumber = parseFloat(row.term) || 1;
-        interestIncomeVal =
-          (parseFloat(row.Totalpay) - parseFloat(row.loanAmount)) / termNumber;
-      }
+      // Interest Income (Outstanding Interest): total interest - paid interest
+      const interestIncomeVal = totalInterestVal - (row.interest_paid || 0);
 
       // 13. paidInterestIncome = sum of TotInterest in cashbook
       const paidInterestIncomeVal = row.interest_paid || 0;
