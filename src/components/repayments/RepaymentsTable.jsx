@@ -49,7 +49,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const itemsPerPage = 20;
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
@@ -130,11 +130,16 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
 
   // Get paginated data
   const filteredData = filterData(data);
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const shouldPaginate = filters.paymentMode !== "all";
+  const totalPages = shouldPaginate
+    ? Math.ceil(filteredData.length / itemsPerPage)
+    : 1;
+  const paginatedData = shouldPaginate
+    ? filteredData.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+      )
+    : filteredData;
 
   // Update the isPaymentDisabled logic
   const isPaymentDisabled = false; // Remove the previous limitation
@@ -309,178 +314,188 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
           </div>
 
           {/* Table */}
-          <div className="rounded-md border overflow-hidden">
-            <Table className="min-w-full">
-              <TableHeader className="sticky top-0 bg-white z-10 shadow">
-                <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={
-                        paginatedData.length > 0 &&
-                        selectedRecords.length === paginatedData.length
-                      }
-                      onCheckedChange={(checked) => {
-                        setSelectedRecords(
-                          checked ? paginatedData.map((p) => p.id) : []
-                        );
-                      }}
-                    />
-                  </TableHead>
-                  <TableHead>Contract No</TableHead>
-                  <TableHead>Customer Name</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Center</TableHead>
-                  <TableHead>DS Office</TableHead>
-                  <TableHead>Loan Type</TableHead>
-                  <TableHead>Payment Mode</TableHead>
-                  <TableHead>Total Amount</TableHead>
-                  {filters.paymentMode === "group" && (
-                    <TableHead>Group Total</TableHead>
-                  )}
-                  <TableHead>Interest Rate</TableHead>
-
-                  <TableHead>Settlement</TableHead>
-                  <TableHead>Paid Amount</TableHead>
-                  <TableHead>Arrears</TableHead>
-                  <TableHead>Overpayment</TableHead>
-                  <TableHead>Due Days</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedData.length > 0 ? (
-                  paginatedData.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>
+          <div className="overflow-auto max-w-full h-[500px]">
+            <div className="overflow-x-auto">
+              <div className="rounded-md border max-w-auto overflow-hidden">
+                <Table className="min-w-full">
+                  <TableHeader className="sticky top-0 bg-white z-10 shadow">
+                    <TableRow>
+                      <TableHead className="w-[50px]">
                         <Checkbox
-                          checked={selectedRecords.includes(payment.id)}
+                          checked={
+                            paginatedData.length > 0 &&
+                            selectedRecords.length === paginatedData.length
+                          }
                           onCheckedChange={(checked) => {
                             setSelectedRecords(
-                              checked
-                                ? [...selectedRecords, payment.id]
-                                : selectedRecords.filter(
-                                    (id) => id !== payment.id
-                                  )
+                              checked ? paginatedData.map((p) => p.id) : []
                             );
                           }}
                         />
-                      </TableCell>
-                      <TableCell>{payment.telno}</TableCell>
-                      <TableCell>{payment.customerName}</TableCell>
-                      <TableCell>{payment.location}</TableCell>
-                      <TableCell>{payment.gs}</TableCell>
-                      <TableCell>{payment.ds}</TableCell>
-                      <TableCell>{payment.loanType}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium
-              ${
-                payment.loanTypeMode === "group"
-                  ? "bg-purple-100 text-purple-800"
-                  : "bg-blue-100 text-blue-800"
-              }`}
-                        >
-                          {payment.loanTypeMode === "group"
-                            ? `Group (${payment.group_name || "N/A"})`
-                            : payment.loanTypeMode}
-                        </span>
-                      </TableCell>
-
-                      <TableCell>
-                        LKR {Number(payment.Totalpay).toLocaleString()}
-                      </TableCell>
+                      </TableHead>
+                      <TableHead>Contract No</TableHead>
+                      <TableHead>Customer Name</TableHead>
+                      <TableHead>Branch</TableHead>
+                      <TableHead>Center</TableHead>
+                      <TableHead>DS Office</TableHead>
+                      <TableHead>Loan Type</TableHead>
+                      <TableHead>Payment Mode</TableHead>
+                      <TableHead>Total Amount</TableHead>
                       {filters.paymentMode === "group" && (
-                        <TableCell>
-                          LKR{" "}
-                          {groupTotals[payment.group_name]?.toLocaleString() ||
-                            "0"}
-                        </TableCell>
+                        <TableHead>Group Total</TableHead>
                       )}
-                      <TableCell>{payment.rate}%</TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            Number(payment.remainingAmount) === 0
-                              ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          LKR {Number(payment.remainingAmount).toLocaleString()}
-                        </span>
-                      </TableCell>
-                      {/* Paid Amount */}
-                      <TableCell>
-                        LKR{" "}
-                        {(
-                          Number(payment.Totalpay) -
-                          Number(payment.remainingAmount)
-                        ).toLocaleString()}
-                      </TableCell>
-                      {/* Arrears */}
-                      <TableCell>
-                        {Number(payment.balance) < 0 ? (
-                          <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700 font-semibold">
-                            LKR{" "}
-                            {Math.abs(Number(payment.balance)).toLocaleString()}
-                          </span>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      {/* Overpayment */}
-                      <TableCell>
-                        {Number(payment.balance) > 0 ? (
-                          <span className="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold">
-                            LKR {Number(payment.balance).toLocaleString()}
-                          </span>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      {/* Due Days */}
-                      <TableCell>
-                        {payment.dueDays && payment.dueDays !== "0" ? (
-                          <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700 font-semibold">
-                            {payment.dueDays} Days
-                          </span>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={`h-8 px-2 ${
-                            selectedRecords.length > 1
-                              ? "text-gray-400 cursor-not-allowed"
-                              : "text-blue-600"
-                          }`}
-                          onClick={() => handleViewPayment(payment)}
-                          disabled={selectedRecords.length > 1}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          <span className="hidden sm:inline">Make Payment</span>
-                        </Button>
-                      </TableCell>
+                      <TableHead>Interest Rate</TableHead>
+
+                      <TableHead>Settlement</TableHead>
+                      <TableHead>Paid Amount</TableHead>
+                      <TableHead>Arrears</TableHead>
+                      <TableHead>Overpayment</TableHead>
+                      <TableHead>Due Days</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={11} // Update from 10 to 11 to account for new column
-                      className="text-center py-10 text-gray-500"
-                    >
-                      No repayments found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedData.length > 0 ? (
+                      paginatedData.map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedRecords.includes(payment.id)}
+                              onCheckedChange={(checked) => {
+                                setSelectedRecords(
+                                  checked
+                                    ? [...selectedRecords, payment.id]
+                                    : selectedRecords.filter(
+                                        (id) => id !== payment.id
+                                      )
+                                );
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>{payment.telno}</TableCell>
+                          <TableCell>{payment.customerName}</TableCell>
+                          <TableCell>{payment.location}</TableCell>
+                          <TableCell>{payment.gs}</TableCell>
+                          <TableCell>{payment.ds}</TableCell>
+                          <TableCell>{payment.loanType}</TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium
+                ${
+                  payment.loanTypeMode === "group"
+                    ? "bg-purple-100 text-purple-800"
+                    : "bg-blue-100 text-blue-800"
+                }`}
+                            >
+                              {payment.loanTypeMode === "group"
+                                ? `Group (${payment.group_name || "N/A"})`
+                                : payment.loanTypeMode}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            LKR {Number(payment.Totalpay).toLocaleString()}
+                          </TableCell>
+                          {filters.paymentMode === "group" && (
+                            <TableCell>
+                              LKR{" "}
+                              {groupTotals[
+                                payment.group_name
+                              ]?.toLocaleString() || "0"}
+                            </TableCell>
+                          )}
+                          <TableCell>{payment.rate}%</TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                Number(payment.remainingAmount) === 0
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-yellow-100 text-yellow-800"
+                              }`}
+                            >
+                              LKR{" "}
+                              {Number(payment.remainingAmount).toLocaleString()}
+                            </span>
+                          </TableCell>
+                          {/* Paid Amount */}
+                          <TableCell>
+                            LKR{" "}
+                            {(
+                              Number(payment.Totalpay) -
+                              Number(payment.remainingAmount)
+                            ).toLocaleString()}
+                          </TableCell>
+                          {/* Arrears */}
+                          <TableCell>
+                            {Number(payment.balance) < 0 ? (
+                              <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700 font-semibold">
+                                LKR{" "}
+                                {Math.abs(
+                                  Number(payment.balance)
+                                ).toLocaleString()}
+                              </span>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                          {/* Overpayment */}
+                          <TableCell>
+                            {Number(payment.balance) > 0 ? (
+                              <span className="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold">
+                                LKR {Number(payment.balance).toLocaleString()}
+                              </span>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                          {/* Due Days */}
+                          <TableCell>
+                            {payment.dueDays && payment.dueDays !== "0" ? (
+                              <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700 font-semibold">
+                                {payment.dueDays} Days
+                              </span>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`h-8 px-2 ${
+                                selectedRecords.length > 1
+                                  ? "text-gray-400 cursor-not-allowed"
+                                  : "text-blue-600"
+                              }`}
+                              onClick={() => handleViewPayment(payment)}
+                              disabled={selectedRecords.length > 1}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              <span className="hidden sm:inline">
+                                Make Payment
+                              </span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={16} // Update to match the actual number of columns
+                          className="text-center py-10 text-gray-500"
+                        >
+                          No repayments found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
+          {shouldPaginate && totalPages > 1 && (
             <div className="flex justify-between items-center mt-4">
               <div className="text-sm text-gray-500">
                 Page {currentPage} of {totalPages}
