@@ -49,7 +49,7 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 12;
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
@@ -334,15 +334,16 @@ export default function RepaymentsTable({ data = [], onRefresh }) {
                   <TableHead>Loan Type</TableHead>
                   <TableHead>Payment Mode</TableHead>
                   <TableHead>Total Amount</TableHead>
-                  <TableHead>Interest Rate</TableHead>
                   {filters.paymentMode === "group" && (
                     <TableHead>Group Total</TableHead>
                   )}
+                  <TableHead>Interest Rate</TableHead>
+
                   <TableHead>Settlement</TableHead>
                   <TableHead>Paid Amount</TableHead>
                   <TableHead>Arrears</TableHead>
                   <TableHead>Overpayment</TableHead>
-                  <TableHead>Due Days</TableHead> 
+                  <TableHead>Due Days</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
