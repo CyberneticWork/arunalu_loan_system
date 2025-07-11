@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 
 export default function PaymentModal({
@@ -53,6 +53,24 @@ export default function PaymentModal({
 
   const totalAmount =
     payments?.reduce((sum, p) => sum + Number(p?.remainingAmount || 0), 0) || 0;
+
+  // Calculate total entered amount in real-time
+  const totalEnteredAmount = useMemo(() => {
+    if (!isMultiple) {
+      // For single payment, just return the amount directly
+      return parseFloat(paymentDetails?.amount || 0);
+    }
+
+    // Make sure paymentDetails is an array before using reduce
+    if (!Array.isArray(paymentDetails)) {
+      return 0;
+    }
+
+    return paymentDetails.reduce((sum, payment) => {
+      const amount = parseFloat(payment.amount || 0);
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+  }, [paymentDetails, isMultiple]);
 
   const handleAmountChange = (id, value) => {
     if (isMultiple) {
@@ -222,12 +240,32 @@ export default function PaymentModal({
                   <div className="text-sm text-gray-600">
                     Showing {payments.length} payments
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-600">
-                      Total Amount to Pay
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600">
+                        Total Amount to Pay
+                      </div>
+                      <div className="text-lg font-semibold">
+                        LKR {totalAmount.toLocaleString()}
+                      </div>
                     </div>
-                    <div className="text-lg font-semibold">
-                      LKR {totalAmount.toLocaleString()}
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600">
+                        Total Entered Amount
+                      </div>
+                      <div
+                        className={`text-lg font-semibold ${
+                          totalEnteredAmount > 0
+                            ? "text-green-600"
+                            : "text-gray-400"
+                        }`}
+                      >
+                        LKR{" "}
+                        {totalEnteredAmount.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
