@@ -1,34 +1,35 @@
 "use client";
 
 import React from "react";
-import { useState } from "react";
-import { Printer, X, Download } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Printer, X, Download, ChevronDown, Search } from "lucide-react";
 import jsPDF from "jspdf";
 
 export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
   const [filter, setFilter] = useState("all");
   const [loanTypeFilter, setLoanTypeFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [centerFilter, setCenterFilter] = useState("");
+  const [isCenterDropdownOpen, setIsCenterDropdownOpen] = useState(false);
+  const [centerSearchTerm, setCenterSearchTerm] = useState("");
 
   if (!isOpen) return null;
+
+  // Get unique centers for dropdown
+  const centers = [...new Set(data.map(item => item.gs).filter(Boolean))].sort();
 
   const filteredData = data.filter((item) => {
     if (filter === "group" && item.loanTypeMode !== "group") return false;
     if (filter === "individual" && item.loanTypeMode !== "normal") return false;
     if (loanTypeFilter && item.loanType !== loanTypeFilter) return false;
-    if (
-      typeFilter &&
-      (!item.type || item.type.toLowerCase() !== typeFilter.toLowerCase())
-    )
-      return false;
+    if (typeFilter && (!item.type || item.type.toLowerCase() !== typeFilter.toLowerCase())) return false;
+    if (centerFilter && item.gs !== centerFilter) return false;
     return true;
   });
 
   // Calculate number of pages needed
   const ROWS_PER_PAGE = 10;
-  const totalPages = Math.ceil(
-    Math.max(filteredData.length, 1) / ROWS_PER_PAGE
-  );
+  const totalPages = Math.ceil(Math.max(filteredData.length, 1) / ROWS_PER_PAGE);
 
   // Generate page data with exactly 10 rows (including empty rows)
   const getPageData = (pageIndex) => {
@@ -43,6 +44,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
         group_name: "",
         customer_name: "",
         contact: "",
+        gs: "",
         installment: "",
         term: "",
         Totalpay: 0,
@@ -58,22 +60,36 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
     const startIdx = pageIndex * ROWS_PER_PAGE;
     const pageData = filteredData.slice(startIdx, startIdx + ROWS_PER_PAGE);
     return {
-      totalLoanAmount: pageData.reduce(
-        (sum, item) => sum + Number(item.Totalpay || 0),
-        0
-      ),
-      totalOutstanding: pageData.reduce(
-        (sum, item) => sum + Number(item.Outstanding_amount || 0),
-        0
-      ),
+      totalLoanAmount: pageData.reduce((sum, item) => sum + Number(item.Totalpay || 0), 0),
+      totalOutstanding: pageData.reduce((sum, item) => sum + Number(item.Outstanding_amount || 0), 0),
     };
+  };
+
+  // Function to wrap text for long names
+  const wrapText = (text, maxLength = 20) => {
+    if (!text || text.length <= maxLength) return text;
+    
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    words.forEach(word => {
+      if ((currentLine + ' ' + word).trim().length <= maxLength) {
+        currentLine = (currentLine + ' ' + word).trim();
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    
+    if (currentLine) lines.push(currentLine);
+    return lines.join('\n');
   };
 
   // Generate table for a specific page
   const TablePage = ({ pageIndex }) => {
     const pageData = getPageData(pageIndex);
-    const { totalLoanAmount, totalOutstanding } =
-      calculatePageTotals(pageIndex);
+    const { totalLoanAmount, totalOutstanding } = calculatePageTotals(pageIndex);
 
     return (
       <div className="print-page">
@@ -81,6 +97,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
           <div className="print-header">
             <h2 className="text-xl font-bold text-gray-900">
               Loan Report - Page {pageIndex + 1}
+              {centerFilter && ` - ${centerFilter} Center`}
             </h2>
             <p className="text-sm text-gray-600">
               Generated on {new Date().toLocaleDateString("en-GB")}
@@ -97,7 +114,9 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 Member Name
               </th>
               <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
-                {/* New column header */}
+                Center
+              </th>
+              <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
                 Loan Type (Type)
               </th>
               <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
@@ -131,11 +150,13 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 <td className="border border-gray-200 px-4 py-3">
                   {!item.isEmpty ? item.group_name || "Individual" : ""}
                 </td>
-                <td className="border border-gray-200 px-4 py-3">
-                  {!item.isEmpty ? item.customer_name : ""}
+                <td className="border border-gray-200 px-4 py-3 whitespace-pre-line text-sm">
+                  {!item.isEmpty ? wrapText(item.customer_name) : ""}
                 </td>
                 <td className="border border-gray-200 px-4 py-3">
-                  {/* New combined column */}
+                  {!item.isEmpty ? item.gs : ""}
+                </td>
+                <td className="border border-gray-200 px-4 py-3">
                   {!item.isEmpty
                     ? `${item.loanType || ""}${item.type ? ` (${item.type})` : ""}`
                     : ""}
@@ -177,6 +198,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
               <td className="border border-gray-200 px-4 py-3"></td>
               <td className="border border-gray-200 px-4 py-3"></td>
               <td className="border border-gray-200 px-4 py-3"></td>
+              <td className="border border-gray-200 px-4 py-3"></td>
               {/* Empty cells for dates and attendance */}
               {[1, 2, 3, 4].map((num) => (
                 <React.Fragment key={`total-attendance-${num}`}>
@@ -210,23 +232,20 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
   };
 
   const handlePrint = () => {
-    // Hide the buttons and filters before printing
     const filterButtons = document.querySelector(".flex.rounded-md.shadow-sm");
     const actionButtons = document.querySelector(".flex.gap-2");
 
     if (filterButtons) filterButtons.style.display = "none";
     if (actionButtons) actionButtons.style.display = "none";
 
-    // Call browser print
     window.print();
 
-    // Restore the buttons after printing
     if (filterButtons) filterButtons.style.display = "flex";
     if (actionButtons) actionButtons.style.display = "flex";
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF("l", "mm", "a4");
+    const doc = new jsPDF("l", "mm", "a3");
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
     const margin = 10;
@@ -239,9 +258,10 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
 
       let y = margin;
 
-      // Add title
-      doc.setFontSize(16);
-      doc.text("Loan Report", margin, y);
+      // Add title with center name if selected
+      doc.setFontSize(10);
+      const title = centerFilter ? `Loan Report - ${centerFilter} Center` : "Loan Report";
+      doc.text(title, margin, y);
 
       // Add date
       doc.setFontSize(10);
@@ -259,7 +279,8 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
       const columns = [
         { header: "Group Name", width: 25 },
         { header: "Member Name", width: 35 },
-        { header: "Loan Type (Type)", width: 35 }, // New column
+        { header: "Center", width: 35 },
+        { header: "Loan Type (Type)", width: 35 },
         { header: "Contact", width: 25 },
         { header: "Installment / Term", width: 30 },
         { header: "Loan Amount", width: 30 },
@@ -272,6 +293,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
         { header: "Ate 3", width: 12 },
         { header: "Date 4", width: 15 },
         { header: "Ate 4", width: 12 },
+        
       ];
 
       // Draw table header
@@ -313,35 +335,44 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 text = item.group_name || "Individual";
                 break;
               case 1:
-                text = item.customer_name || "";
+                // Handle long member names with line breaks in PDF
+                const wrappedName = wrapText(item.customer_name || "", 15);
+                const nameLines = wrappedName.split('\n');
+                nameLines.forEach((line, lineIndex) => {
+                  if (lineIndex < 2) { // Limit to 2 lines for PDF
+                    doc.text(line, x + 2, y + 4 + (lineIndex * 3));
+                  }
+                });
                 break;
               case 2:
-                text = (item.loanType || "") + (item.type ? ` (${item.type})` : "");
+                text = item.gs || "";
                 break;
               case 3:
-                text = item.contact || "";
+                text = (item.loanType || "") + (item.type ? ` (${item.type})` : "");
                 break;
               case 4:
-               
+                text = item.contact || "";
+                break;
+              case 5:
                 text =
                   item.installment && item.term
                     ? `${item.installment} × ${item.term}`
                     : "";
                 break;
-              case 5:
+              case 6:
                 text = item.Totalpay
                   ? `LKR ${Number(item.Totalpay).toLocaleString()}`
                   : "";
                 break;
-              case 6:
+              case 7:
                 text = item.Outstanding_amount
                   ? `LKR ${Number(item.Outstanding_amount).toLocaleString()}`
                   : "";
                 break;
             }
 
-            if (text) {
-              if (colIndex === 4 || colIndex === 5) {
+            if (text && colIndex !== 1) { // Skip member name as it's handled above
+              if (colIndex === 5 || colIndex === 6 || colIndex === 7) {
                 doc.text(text, x + col.width - 2, y + 6, { align: "right" });
               } else {
                 doc.text(text, x + 2, y + 6);
@@ -350,12 +381,12 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
           }
 
           // Draw dotted lines and checkboxes for all rows (empty and filled)
-          if ([6, 8, 10, 12].includes(colIndex)) {
+          if ([8, 10, 12, 14].includes(colIndex)) {
             // Draw dotted line for date columns
             for (let i = 2; i < col.width - 2; i += 2) {
               doc.line(x + i, y + rowHeight - 2, x + i + 1, y + rowHeight - 2);
             }
-          } else if ([7, 9, 11, 13].includes(colIndex)) {
+          } else if ([9, 11, 13, 15].includes(colIndex)) {
             // Draw checkbox for attendance columns
             doc.rect(x + 3, y + 2, 6, 6, "S");
           }
@@ -374,14 +405,12 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
       // Draw total row background and borders
       columns.forEach((col, colIndex) => {
         if (colIndex === 0) {
-          // Set font for the "Total" cell
           doc.setFontSize(9);
           doc.setFont(undefined, "bold");
           doc.setFillColor(245, 245, 245);
           doc.rect(x, y, col.width, totalRowHeight, "FD");
           doc.text("Total", x + 2, y + 6);
         } else {
-          // Empty cells for the rest of the columns
           doc.setFillColor(245, 245, 245);
           doc.rect(x, y, col.width, totalRowHeight, "FD");
         }
@@ -408,8 +437,14 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
     }
 
     // Save the PDF
-    doc.save("loan-report.pdf");
+    const fileName = centerFilter ? `loan-report-${centerFilter}-center.pdf` : "loan-report.pdf";
+    doc.save(fileName);
   };
+
+  // Filter centers based on search term
+  const filteredCenters = centers.filter(center =>
+    center.toLowerCase().includes(centerSearchTerm.toLowerCase())
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -417,7 +452,9 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
         {/* Header */}
         <div className="p-4 flex justify-between items-center border-b">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Loan Report</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Loan Report{centerFilter && ` - ${centerFilter} Center`}
+            </h2>
             <p className="text-sm text-gray-600">
               Generated on {new Date().toLocaleDateString("en-GB")}
             </p>
@@ -456,7 +493,62 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 Individual
               </button>
             </div>
-            {/* New Loan Type Filter */}
+
+            {/* Center Dropdown Filter */}
+            <div className="relative">
+              <button
+                onClick={() => setIsCenterDropdownOpen(!isCenterDropdownOpen)}
+                className="flex items-center justify-between px-3 py-2 text-sm border rounded-md w-40 bg-white hover:bg-gray-50"
+              >
+                <span>{centerFilter || "All Centers"}</span>
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </button>
+              {isCenterDropdownOpen && (
+                <div className="absolute z-10 mt-1 w-56 bg-white rounded-md shadow-lg border">
+                  <div className="p-2 border-b">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search centers..."
+                        className="pl-8 pr-2 py-1.5 w-full text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        value={centerSearchTerm}
+                        onChange={(e) => setCenterSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    <button
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
+                        !centerFilter ? "bg-blue-50 text-blue-600" : ""
+                      }`}
+                      onClick={() => {
+                        setCenterFilter("");
+                        setIsCenterDropdownOpen(false);
+                      }}
+                    >
+                      All Centers
+                    </button>
+                    {filteredCenters.map((center) => (
+                      <button
+                        key={center}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
+                          centerFilter === center ? "bg-blue-50 text-blue-600" : ""
+                        }`}
+                        onClick={() => {
+                          setCenterFilter(center);
+                          setIsCenterDropdownOpen(false);
+                        }}
+                      >
+                        {center}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Loan Type Filter */}
             <select
               value={loanTypeFilter}
               onChange={(e) => setLoanTypeFilter(e.target.value)}
@@ -467,7 +559,8 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 <option key={lt} value={lt}>{lt}</option>
               ))}
             </select>
-            {/* New Type Filter */}
+
+            {/* Type Filter */}
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
@@ -478,6 +571,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
             </select>
+
             <div className="flex gap-2">
               <button
                 onClick={generatePDF}
@@ -493,20 +587,6 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 <X className="h-4 w-4 mr-2" />
                 Close
               </button>
-              {/* <button
-                onClick={handlePrint}
-                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Print
-              </button>
-              <button
-                onClick={onClose}
-                className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Close
-              </button> */}
             </div>
           </div>
         </div>
@@ -523,7 +603,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
         </div>
 
         {/* Print styles */}
-        <style jsx global>{`
+       <style jsx global>{`
           @page {
             size: A4 landscape;
             margin: 15mm 10mm;
@@ -581,6 +661,12 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
             td {
               padding: 4px !important;
               border: 1px solid #000 !important;
+            }
+
+            .whitespace-pre-line {
+              white-space: pre-line !important;
+              font-size: 8pt !important;
+              line-height: 1.2 !important;
             }
 
             h2.text-2xl {

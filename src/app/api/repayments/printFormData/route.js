@@ -9,6 +9,7 @@ export async function GET(request) {
         b.group_name,
         c.fullname AS customer_name,
         c.telno AS contact,
+        c.gs, 
         b.loanTypeMode,
         b.loanType,          
         b.type,              
@@ -28,7 +29,7 @@ export async function GET(request) {
       WHERE 
         b.status = 'active'
       GROUP BY 
-        b.id, b.group_name, c.fullname, c.telno, b.loanTypeMode, 
+        b.id, b.group_name, c.fullname, c.telno, c.gs, b.loanTypeMode, 
         b.loanType, b.type, b.Totalpay, b.term, b.status
       ORDER BY 
         b.group_name;
