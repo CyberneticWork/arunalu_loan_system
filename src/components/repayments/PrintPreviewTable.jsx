@@ -1,10 +1,10 @@
+
 "use client";
 
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Printer, X, Download, ChevronDown, Search } from "lucide-react";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
   const [filter, setFilter] = useState("all");
@@ -29,7 +29,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
   });
 
   // Calculate number of pages needed
-  const ROWS_PER_PAGE = 10;
+  const ROWS_PER_PAGE = 15;
   const totalPages = Math.ceil(Math.max(filteredData.length, 1) / ROWS_PER_PAGE);
 
   // Generate page data with exactly 10 rows (including empty rows)
@@ -48,7 +48,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
         gs: "",
         installment: "",
         term: "",
-        Totalpay: 0,
+        loanAmount: 0,
         Outstanding_amount: 0,
         isEmpty: true,
       }));
@@ -61,13 +61,13 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
     const startIdx = pageIndex * ROWS_PER_PAGE;
     const pageData = filteredData.slice(startIdx, startIdx + ROWS_PER_PAGE);
     return {
-      totalLoanAmount: pageData.reduce((sum, item) => sum + Number(item.Totalpay || 0), 0),
+      totalLoanAmount: pageData.reduce((sum, item) => sum + Number(item.loanAmount || 0), 0),
       totalOutstanding: pageData.reduce((sum, item) => sum + Number(item.Outstanding_amount || 0), 0),
     };
   };
 
-  // Function to wrap text for long names
-  const wrapText = (text, maxLength = 20) => {
+  // Function to wrap text for long names (updated for 2 lines)
+  const wrapText = (text, maxLength = 18) => {
     if (!text || text.length <= maxLength) return text;
     
     const words = text.split(' ');
@@ -84,6 +84,13 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
     });
     
     if (currentLine) lines.push(currentLine);
+    
+    // Limit to 2 lines maximum
+    if (lines.length > 2) {
+      lines[1] = lines[1].substring(0, maxLength - 3) + '...';
+      return lines.slice(0, 2).join('\n');
+    }
+    
     return lines.join('\n');
   };
 
@@ -108,10 +115,10 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-gray-50">
-              <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
+              <th className="border border-gray-200 px-2 py-3 text-left font-semibold text-gray-900 w-20">
                 Group Name
               </th>
-              <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
+              <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900 w-32">
                 Member Name
               </th>
               <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
@@ -129,13 +136,13 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
               <th className="border border-gray-200 px-4 py-3 text-right font-semibold text-gray-900">
                 Outstanding
               </th>
-              {/* Add 4 sets of Date and Attendance columns */}
-              {[1, 2, 3, 4].map((num) => (
+              {/* Add 5 sets of Date and Attendance columns */}
+              {[1, 2, 3, 4, 5].map((num) => (
                 <React.Fragment key={`header-${num}`}>
-                  <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-900">
+                  <th className="border border-gray-200 px-2 py-3 text-center font-semibold text-gray-900 w-16">
                     Date {num}
                   </th>
-                  <th className="border border-gray-200 px-4 py-3 text-center font-semibold text-gray-900">
+                  <th className="border border-gray-200 px-2 py-3 text-center font-semibold text-gray-900 w-12">
                     Attend {num}
                   </th>
                 </React.Fragment>
@@ -146,12 +153,12 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
             {pageData.map((item, index) => (
               <tr
                 key={item.loan_id || `row-${pageIndex}-${index}`}
-                className="hover:bg-gray-50 h-[52px]"
+                className="hover:bg-gray-50 h-[60px]"
               >
-                <td className="border border-gray-200 px-4 py-3">
+                <td className="border border-gray-200 px-2 py-3 text-sm">
                   {!item.isEmpty ? item.group_name || "Individual" : ""}
                 </td>
-                <td className="border border-gray-200 px-4 py-3 whitespace-pre-line text-sm">
+                <td className="border border-gray-200 px-4 py-3 whitespace-pre-line text-xs leading-tight">
                   {!item.isEmpty ? wrapText(item.customer_name) : ""}
                 </td>
                 <td className="border border-gray-200 px-4 py-3">
@@ -166,8 +173,8 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                   {!item.isEmpty ? `${item.installment} × ${item.term}` : ""}
                 </td>
                 <td className="border border-gray-200 px-4 py-3 text-right">
-                  {!item.isEmpty && item.Totalpay
-                    ? `LKR ${Number(item.Totalpay).toLocaleString()}`
+                  {!item.isEmpty && item.loanAmount
+                    ? `LKR ${Number(item.loanAmount).toLocaleString()}`
                     : ""}
                 </td>
                 <td className="border border-gray-200 px-4 py-3 text-right text-orange-600">
@@ -175,15 +182,15 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                     ? `LKR ${Number(item.Outstanding_amount).toLocaleString()}`
                     : ""}
                 </td>
-                {/* Add 4 sets of empty date and checkbox cells */}
-                {[1, 2, 3, 4].map((num) => (
+                {/* Add 5 sets of empty date and checkbox cells */}
+                {[1, 2, 3, 4, 5].map((num) => (
                   <React.Fragment key={`attendance-${index}-${num}`}>
-                    <td className="border border-gray-200 px-4 py-3 text-center">
+                    <td className="border border-gray-200 px-2 py-3 text-center">
                       <div className="h-8 border-b border-dotted border-gray-400"></div>
                     </td>
-                    <td className="border border-gray-200 px-4 py-3 text-center">
+                    <td className="border border-gray-200 px-2 py-3 text-center">
                       <div className="flex justify-center items-center h-8">
-                        <div className="w-5 h-5 border border-gray-400"></div>
+                        <div className="w-4 h-4 border border-gray-400"></div>
                       </div>
                     </td>
                   </React.Fragment>
@@ -192,8 +199,8 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
             ))}
 
             {/* Total row at the end */}
-            <tr className="h-[52px] font-bold bg-gray-50">
-              <td className="border border-gray-200 px-4 py-3">Total</td>
+            <tr className="h-[60px] font-bold bg-gray-50">
+              <td className="border border-gray-200 px-2 py-3">Total</td>
               <td className="border border-gray-200 px-4 py-3"></td>
               <td className="border border-gray-200 px-4 py-3"></td>
               <td className="border border-gray-200 px-4 py-3"></td>
@@ -201,10 +208,10 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
               <td className="border border-gray-200 px-4 py-3"></td>
               <td className="border border-gray-200 px-4 py-3"></td>
               {/* Empty cells for dates and attendance */}
-              {[1, 2, 3, 4].map((num) => (
+              {[1, 2, 3, 4, 5].map((num) => (
                 <React.Fragment key={`total-attendance-${num}`}>
-                  <td className="border border-gray-200 px-4 py-3"></td>
-                  <td className="border border-gray-200 px-4 py-3"></td>
+                  <td className="border border-gray-200 px-2 py-3"></td>
+                  <td className="border border-gray-200 px-2 py-3"></td>
                 </React.Fragment>
               ))}
             </tr>
@@ -246,124 +253,216 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
   };
 
   const generatePDF = () => {
-    // Create PDF in A4 landscape (297mm x 210mm)
-    const doc = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4'
-    });
-
+    const doc = new jsPDF("l", "mm", "a4");
     const pageWidth = doc.internal.pageSize.width;
-    const margin = 10;
-    const tableStartY = 25; // Start table lower to accommodate header
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 8;
 
     // Process each page
     for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
       if (pageIndex > 0) {
-        doc.addPage('a4', 'landscape');
+        doc.addPage();
       }
 
-      // Add title with center name if selected
-      doc.setFontSize(12);
-      const title = centerFilter ? `Loan Report - ${centerFilter} Center` : "Loan Report";
-      doc.text(title, margin, 10);
+      let y = margin;
 
-      // Add date and page info
-      doc.setFontSize(10);
+      // Add title with center name if selected
+      doc.setFontSize(9);
+      const title = centerFilter ? `Loan Report - ${centerFilter} Center` : "Loan Report";
+      doc.text(title, margin, y);
+
+      // Add date
+      doc.setFontSize(8);
       doc.text(
-        `Generated on ${new Date().toLocaleDateString("en-GB")} - Page ${pageIndex + 1}`,
+        `Generated on ${new Date().toLocaleDateString("en-GB")} - Page ${
+          pageIndex + 1
+        }`,
         margin,
-        17
+        y + 6
       );
 
-      // Prepare table data
-      const pageData = getPageData(pageIndex).filter(item => !item.isEmpty);
-      
-      // Define columns
+      y += 16;
+
+      // Define table structure - updated for A4 landscape with 5 date/attendance columns
       const columns = [
-        { header: "Group Name", dataKey: "group_name" },
-        { header: "Member Name", dataKey: "customer_name" },
-        { header: "Contact", dataKey: "contact" },
-        { header: "Center", dataKey: "gs" },
-        { header: "Loan Type", dataKey: "loanType" },
-        { header: "Installment / Term", dataKey: "installment_term" },
-        { header: "Loan Amount", dataKey: "Totalpay" },
-        { header: "Outstanding", dataKey: "Outstanding_amount" },
-        { header: "Date 1", dataKey: "date1" },
-        { header: "Attend 1", dataKey: "attend1" },
-        { header: "Date 2", dataKey: "date2" },
-        { header: "Attend 2", dataKey: "attend2" },
-        { header: "Date 3", dataKey: "date3" },
-        { header: "Attend 3", dataKey: "attend3" },
-        { header: "Date 4", dataKey: "date4" },
-        { header: "Attend 4", dataKey: "attend4" },
+        { header: "Group Name", width: 18 },
+        { header: "Member Name", width: 26 },
+        { header: "Center", width: 24 },
+        { header: "Loan Type", width: 22 },
+        { header: "Contact", width: 18 },
+        { header: "Install/Term", width: 20 },
+        { header: "Loan Amt", width: 20 },
+        { header: "Outstanding", width: 20 },
+        { header: "Date 1", width: 10 },
+        { header: "At1", width: 7 },
+        { header: "Date 2", width: 10 },
+        { header: "At2", width: 7 },
+        { header: "Date 3", width: 10 },
+        { header: "At3", width: 7 },
+        { header: "Date 4", width: 10 },
+        { header: "At4", width: 7 },
+        { header: "Date 5", width: 10 },
+        { header: "At5", width: 7 },
       ];
 
-      // Prepare data for autoTable
-      const body = pageData.map(item => ({
-        group_name: item.group_name || "Individual",
-        customer_name: item.customer_name,
-        contact: item.contact,
-        gs: item.gs,
-        loanType: `${item.loanType || ""}${item.type ? ` (${item.type})` : ""}`,
-        installment_term: `${item.installment} × ${item.term}`,
-        Totalpay: `LKR ${Number(item.Totalpay).toLocaleString()}`,
-        Outstanding_amount: `LKR ${Number(item.Outstanding_amount).toLocaleString()}`,
-        date1: "",
-        attend1: "",
-        date2: "",
-        attend2: "",
-        date3: "",
-        attend3: "",
-        date4: "",
-        attend4: "",
-      }));
+      // Draw table header
+      let x = margin;
+      doc.setFillColor(245, 245, 245);
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.1);
 
-      // Add the table
-      autoTable(doc, {
-        head: [columns.map(col => col.header)],
-        body: body.map(row => columns.map(col => row[col.dataKey])),
-        startY: tableStartY,
-        margin: { top: tableStartY },
-        styles: {
-          fontSize: 8,
-          cellPadding: 1.5,
-          overflow: 'linebreak',
-          valign: 'middle'
-        },
-        columnStyles: {
-          0: { cellWidth: 25 }, // Group Name
-          1: { cellWidth: 35 }, // Member Name
-          2: { cellWidth: 20 }, // Contact
-          3: { cellWidth: 25 }, // Center
-          4: { cellWidth: 30 }, // Loan Type
-          5: { cellWidth: 25 }, // Installment/Term
-          6: { cellWidth: 25, halign: 'right' }, // Loan Amount
-          7: { cellWidth: 25, halign: 'right' }, // Outstanding
-          // Date and attendance columns
-          ...Array.from({ length: 8 }, (_, i) => ({ 
-            [7 + i]: { cellWidth: i % 2 === 0 ? 15 : 12 } 
-          })
-      )},
-        didDrawPage: (data) => {
-          // Add totals after table
-          const totals = calculatePageTotals(pageIndex);
-          doc.setFontSize(10);
-          doc.setFont(undefined, "bold");
-          
-          const totalsY = data.cursor.y + 10;
-          doc.text(
-            `Page Total Loan Amount: LKR ${totals.totalLoanAmount.toLocaleString()}`,
-            pageWidth - margin - 80,
-            totalsY
-          );
-          doc.text(
-            `Page Total Outstanding: LKR ${totals.totalOutstanding.toLocaleString()}`,
-            pageWidth - margin - 80,
-            totalsY + 7
-          );
-        }
+      // Draw header background and borders
+      columns.forEach((col) => {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(x, y, col.width, 8, "FD");
+        doc.setFontSize(6);
+        doc.setTextColor(0);
+        doc.text(col.header, x + 1, y + 5);
+        x += col.width;
       });
+
+      y += 8;
+
+      // Get page data (exactly 10 rows)
+      const pageData = getPageData(pageIndex);
+
+      // Draw exactly 10 rows
+      pageData.forEach((item, rowIndex) => {
+        x = margin;
+        const rowHeight = 10; // Increased row height for 2-line names
+
+        // Draw cell backgrounds and borders
+        columns.forEach((col, colIndex) => {
+          doc.rect(x, y, col.width, rowHeight, "S");
+
+          // Add cell content only for non-empty rows
+          if (!item.isEmpty) {
+            doc.setFontSize(6);
+            let text = "";
+            switch (colIndex) {
+              case 0:
+                text = item.group_name || "Individual";
+                if (text.length > 10) text = text.substring(0, 10) + "...";
+                break;
+              case 1:
+                // Handle long member names - support 2 lines
+                const memberName = item.customer_name || "";
+                if (memberName.length > 15) {
+                  const words = memberName.split(' ');
+                  let line1 = '', line2 = '';
+                  let currentLine = 1;
+                  
+                  words.forEach(word => {
+                    if (currentLine === 1 && (line1 + ' ' + word).trim().length <= 15) {
+                      line1 = (line1 + ' ' + word).trim();
+                    } else if (currentLine === 1) {
+                      currentLine = 2;
+                      line2 = word;
+                    } else if ((line2 + ' ' + word).trim().length <= 15) {
+                      line2 = (line2 + ' ' + word).trim();
+                    }
+                  });
+                  
+                  if (line2.length > 15) line2 = line2.substring(0, 12) + "...";
+                  
+                  doc.text(line1, x + 1, y + 4);
+                  if (line2) doc.text(line2, x + 1, y + 7);
+                } else {
+                  doc.text(memberName, x + 1, y + 5);
+                }
+                break;
+              case 2:
+                text = item.gs || "";
+                if (text.length > 13) text = text.substring(0, 13) + "...";
+                break;
+              case 3:
+                const loanTypeText = (item.loanType || "") + (item.type ? ` (${item.type})` : "");
+                text = loanTypeText.length > 13 ? loanTypeText.substring(0, 13) + "..." : loanTypeText;
+                break;
+              case 4:
+                text = item.contact || "";
+                break;
+              case 5:
+                text =
+                  item.installment && item.term
+                    ? `${item.installment} × ${item.term}`
+                    : "";
+                break;
+              case 6:
+                text = item.loanAmount
+                  ? `${Number(item.loanAmount).toLocaleString()}`
+                  : "";
+                break;
+              case 7:
+                text = item.Outstanding_amount
+                  ? `${Number(item.Outstanding_amount).toLocaleString()}`
+                  : "";
+                break;
+            }
+
+            if (text && colIndex !== 1) { // Skip member name since it's handled separately
+              if (colIndex === 5 || colIndex === 6 || colIndex === 7) {
+                doc.text(text, x + col.width - 1, y + 5, { align: "right" });
+              } else {
+                doc.text(text, x + 1, y + 5);
+              }
+            }
+          }
+
+          // Draw dotted lines and checkboxes for all rows (empty and filled)
+          if ([8, 10, 12, 14, 16].includes(colIndex)) {
+            // Draw dotted line for date columns
+            for (let i = 1; i < col.width - 1; i += 1.5) {
+              doc.line(x + i, y + rowHeight - 1, x + i + 0.5, y + rowHeight - 1);
+            }
+          } else if ([9, 11, 13, 15, 17].includes(colIndex)) {
+            // Draw checkbox for attendance columns
+            doc.rect(x + 1.5, y + 2, 3.5, 3.5, "S");
+          }
+
+          x += col.width;
+        });
+
+        y += rowHeight;
+      });
+
+      // Add total row
+      x = margin;
+      const totalRowHeight = 10;
+      doc.setFillColor(245, 245, 245);
+
+      // Draw total row background and borders
+      columns.forEach((col, colIndex) => {
+        if (colIndex === 0) {
+          doc.setFontSize(7);
+          doc.setFont(undefined, "bold");
+          doc.setFillColor(245, 245, 245);
+          doc.rect(x, y, col.width, totalRowHeight, "FD");
+          doc.text("Total", x + 1, y + 6);
+        } else {
+          doc.setFillColor(245, 245, 245);
+          doc.rect(x, y, col.width, totalRowHeight, "FD");
+        }
+        x += col.width;
+      });
+      y += totalRowHeight;
+
+      // Add page totals
+      const totals = calculatePageTotals(pageIndex);
+      doc.setFontSize(8);
+      doc.setFont(undefined, "bold");
+
+      const totalY = y + 8;
+      doc.text(
+        `Page Total Loan: ${totals.totalLoanAmount.toLocaleString()}`,
+        pageWidth - margin - 60,
+        totalY
+      );
+      doc.text(
+        `Page Total Outstanding: ${totals.totalOutstanding.toLocaleString()}`,
+        pageWidth - margin - 60,
+        totalY + 5
+      );
     }
 
     // Save the PDF
@@ -378,7 +477,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white w-[95%] max-w-6xl h-[90vh] rounded-lg shadow-xl overflow-hidden flex flex-col">
+      <div className="bg-white w-[95%] max-w-7xl h-[90vh] rounded-lg shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-4 flex justify-between items-center border-b">
           <div>
@@ -533,7 +632,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
         </div>
 
         {/* Print styles */}
-        <style jsx global>{`
+       <style jsx global>{`
           @page {
             size: A4 landscape;
             margin: 15mm 10mm;
