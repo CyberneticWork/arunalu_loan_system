@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Printer, X, Download, ChevronDown, Search } from "lucide-react";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
   const [filter, setFilter] = useState("all");
@@ -245,195 +246,124 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF("l", "mm", "a3");
+    // Create PDF in A4 landscape (297mm x 210mm)
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
     const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
     const margin = 10;
+    const tableStartY = 25; // Start table lower to accommodate header
 
     // Process each page
     for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
       if (pageIndex > 0) {
-        doc.addPage();
+        doc.addPage('a4', 'landscape');
       }
 
-      let y = margin;
-
       // Add title with center name if selected
-      doc.setFontSize(10);
+      doc.setFontSize(12);
       const title = centerFilter ? `Loan Report - ${centerFilter} Center` : "Loan Report";
-      doc.text(title, margin, y);
+      doc.text(title, margin, 10);
 
-      // Add date
+      // Add date and page info
       doc.setFontSize(10);
       doc.text(
-        `Generated on ${new Date().toLocaleDateString("en-GB")} - Page ${
-          pageIndex + 1
-        }`,
+        `Generated on ${new Date().toLocaleDateString("en-GB")} - Page ${pageIndex + 1}`,
         margin,
-        y + 7
+        17
       );
 
-      y += 20;
-
-      // Define table structure
+      // Prepare table data
+      const pageData = getPageData(pageIndex).filter(item => !item.isEmpty);
+      
+      // Define columns
       const columns = [
-        { header: "Group Name", width: 25 },
-        { header: "Member Name", width: 35 },
-        { header: "Center", width: 35 },
-        { header: "Loan Type (Type)", width: 35 },
-        { header: "Contact", width: 25 },
-        { header: "Installment / Term", width: 30 },
-        { header: "Loan Amount", width: 30 },
-        { header: "Outstanding", width: 30 },
-        { header: "Date 1", width: 15 },
-        { header: "Ate 1", width: 12 },
-        { header: "Date 2", width: 15 },
-        { header: "Ate 2", width: 12 },
-        { header: "Date 3", width: 15 },
-        { header: "Ate 3", width: 12 },
-        { header: "Date 4", width: 15 },
-        { header: "Ate 4", width: 12 },
-        
+        { header: "Group Name", dataKey: "group_name" },
+        { header: "Member Name", dataKey: "customer_name" },
+        { header: "Contact", dataKey: "contact" },
+        { header: "Center", dataKey: "gs" },
+        { header: "Loan Type", dataKey: "loanType" },
+        { header: "Installment / Term", dataKey: "installment_term" },
+        { header: "Loan Amount", dataKey: "Totalpay" },
+        { header: "Outstanding", dataKey: "Outstanding_amount" },
+        { header: "Date 1", dataKey: "date1" },
+        { header: "Attend 1", dataKey: "attend1" },
+        { header: "Date 2", dataKey: "date2" },
+        { header: "Attend 2", dataKey: "attend2" },
+        { header: "Date 3", dataKey: "date3" },
+        { header: "Attend 3", dataKey: "attend3" },
+        { header: "Date 4", dataKey: "date4" },
+        { header: "Attend 4", dataKey: "attend4" },
       ];
 
-      // Draw table header
-      let x = margin;
-      doc.setFillColor(245, 245, 245);
-      doc.setDrawColor(0);
-      doc.setLineWidth(0.1);
+      // Prepare data for autoTable
+      const body = pageData.map(item => ({
+        group_name: item.group_name || "Individual",
+        customer_name: item.customer_name,
+        contact: item.contact,
+        gs: item.gs,
+        loanType: `${item.loanType || ""}${item.type ? ` (${item.type})` : ""}`,
+        installment_term: `${item.installment} × ${item.term}`,
+        Totalpay: `LKR ${Number(item.Totalpay).toLocaleString()}`,
+        Outstanding_amount: `LKR ${Number(item.Outstanding_amount).toLocaleString()}`,
+        date1: "",
+        attend1: "",
+        date2: "",
+        attend2: "",
+        date3: "",
+        attend3: "",
+        date4: "",
+        attend4: "",
+      }));
 
-      // Draw header background and borders
-      columns.forEach((col) => {
-        doc.setFillColor(245, 245, 245);
-        doc.rect(x, y, col.width, 10, "FD");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
-        doc.text(col.header, x + 2, y + 6);
-        x += col.width;
-      });
-
-      y += 10;
-
-      // Get page data (exactly 10 rows)
-      const pageData = getPageData(pageIndex);
-
-      // Draw exactly 10 rows
-      pageData.forEach((item, rowIndex) => {
-        x = margin;
-        const rowHeight = 10;
-
-        // Draw cell backgrounds and borders
-        columns.forEach((col, colIndex) => {
-          doc.rect(x, y, col.width, rowHeight, "S");
-
-          // Add cell content only for non-empty rows
-          if (!item.isEmpty) {
-            doc.setFontSize(8);
-            let text = "";
-            switch (colIndex) {
-              case 0:
-                text = item.group_name || "Individual";
-                break;
-              case 1:
-                // Handle long member names with line breaks in PDF
-                const wrappedName = wrapText(item.customer_name || "", 15);
-                const nameLines = wrappedName.split('\n');
-                nameLines.forEach((line, lineIndex) => {
-                  if (lineIndex < 2) { // Limit to 2 lines for PDF
-                    doc.text(line, x + 2, y + 4 + (lineIndex * 3));
-                  }
-                });
-                break;
-              case 2:
-                text = item.gs || "";
-                break;
-              case 3:
-                text = (item.loanType || "") + (item.type ? ` (${item.type})` : "");
-                break;
-              case 4:
-                text = item.contact || "";
-                break;
-              case 5:
-                text =
-                  item.installment && item.term
-                    ? `${item.installment} × ${item.term}`
-                    : "";
-                break;
-              case 6:
-                text = item.Totalpay
-                  ? `LKR ${Number(item.Totalpay).toLocaleString()}`
-                  : "";
-                break;
-              case 7:
-                text = item.Outstanding_amount
-                  ? `LKR ${Number(item.Outstanding_amount).toLocaleString()}`
-                  : "";
-                break;
-            }
-
-            if (text && colIndex !== 1) { // Skip member name as it's handled above
-              if (colIndex === 5 || colIndex === 6 || colIndex === 7) {
-                doc.text(text, x + col.width - 2, y + 6, { align: "right" });
-              } else {
-                doc.text(text, x + 2, y + 6);
-              }
-            }
-          }
-
-          // Draw dotted lines and checkboxes for all rows (empty and filled)
-          if ([8, 10, 12, 14].includes(colIndex)) {
-            // Draw dotted line for date columns
-            for (let i = 2; i < col.width - 2; i += 2) {
-              doc.line(x + i, y + rowHeight - 2, x + i + 1, y + rowHeight - 2);
-            }
-          } else if ([9, 11, 13, 15].includes(colIndex)) {
-            // Draw checkbox for attendance columns
-            doc.rect(x + 3, y + 2, 6, 6, "S");
-          }
-
-          x += col.width;
-        });
-
-        y += rowHeight;
-      });
-
-      // Add total row
-      x = margin;
-      const totalRowHeight = 10;
-      doc.setFillColor(245, 245, 245);
-
-      // Draw total row background and borders
-      columns.forEach((col, colIndex) => {
-        if (colIndex === 0) {
-          doc.setFontSize(9);
+      // Add the table
+      autoTable(doc, {
+        head: [columns.map(col => col.header)],
+        body: body.map(row => columns.map(col => row[col.dataKey])),
+        startY: tableStartY,
+        margin: { top: tableStartY },
+        styles: {
+          fontSize: 8,
+          cellPadding: 1.5,
+          overflow: 'linebreak',
+          valign: 'middle'
+        },
+        columnStyles: {
+          0: { cellWidth: 25 }, // Group Name
+          1: { cellWidth: 35 }, // Member Name
+          2: { cellWidth: 20 }, // Contact
+          3: { cellWidth: 25 }, // Center
+          4: { cellWidth: 30 }, // Loan Type
+          5: { cellWidth: 25 }, // Installment/Term
+          6: { cellWidth: 25, halign: 'right' }, // Loan Amount
+          7: { cellWidth: 25, halign: 'right' }, // Outstanding
+          // Date and attendance columns
+          ...Array.from({ length: 8 }, (_, i) => ({ 
+            [7 + i]: { cellWidth: i % 2 === 0 ? 15 : 12 } 
+          })
+      )},
+        didDrawPage: (data) => {
+          // Add totals after table
+          const totals = calculatePageTotals(pageIndex);
+          doc.setFontSize(10);
           doc.setFont(undefined, "bold");
-          doc.setFillColor(245, 245, 245);
-          doc.rect(x, y, col.width, totalRowHeight, "FD");
-          doc.text("Total", x + 2, y + 6);
-        } else {
-          doc.setFillColor(245, 245, 245);
-          doc.rect(x, y, col.width, totalRowHeight, "FD");
+          
+          const totalsY = data.cursor.y + 10;
+          doc.text(
+            `Page Total Loan Amount: LKR ${totals.totalLoanAmount.toLocaleString()}`,
+            pageWidth - margin - 80,
+            totalsY
+          );
+          doc.text(
+            `Page Total Outstanding: LKR ${totals.totalOutstanding.toLocaleString()}`,
+            pageWidth - margin - 80,
+            totalsY + 7
+          );
         }
-        x += col.width;
       });
-      y += totalRowHeight;
-
-      // Add page totals
-      const totals = calculatePageTotals(pageIndex);
-      doc.setFontSize(10);
-      doc.setFont(undefined, "bold");
-
-      const totalY = y + 10;
-      doc.text(
-        `Page Total Loan Amount: LKR ${totals.totalLoanAmount.toLocaleString()}`,
-        pageWidth - margin - 80,
-        totalY
-      );
-      doc.text(
-        `Page Total Outstanding: LKR ${totals.totalOutstanding.toLocaleString()}`,
-        pageWidth - margin - 80,
-        totalY + 7
-      );
     }
 
     // Save the PDF
@@ -603,7 +533,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
         </div>
 
         {/* Print styles */}
-       <style jsx global>{`
+        <style jsx global>{`
           @page {
             size: A4 landscape;
             margin: 15mm 10mm;
