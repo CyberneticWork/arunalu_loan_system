@@ -256,7 +256,7 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
     const doc = new jsPDF("l", "mm", "a4");
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
-    const margin = 8;
+    const margin = 6;
 
     // Process each page
     for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
@@ -285,23 +285,23 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
 
       // Define table structure - updated for A4 landscape with 5 date/attendance columns
       const columns = [
-        { header: "Group Name", width: 18 },
-        { header: "Member Name", width: 26 },
+        { header: "Group", width: 10 },
+        { header: "Member Name", width: 50 },
         { header: "Center", width: 24 },
-        { header: "Loan Type", width: 22 },
-        { header: "Contact", width: 18 },
-        { header: "Install/Term", width: 20 },
-        { header: "Loan Amt", width: 20 },
-        { header: "Outstanding", width: 20 },
-        { header: "Date 1", width: 10 },
+        { header: "Loan Type", width: 25 },
+        { header: "Contact", width: 15 },
+        { header: "Install/Term", width: 14 },
+        { header: "Loan Amt", width: 12 },
+        { header: "Outstanding", width: 15 },
+        { header: "Date 1", width: 17 },
         { header: "At1", width: 7 },
-        { header: "Date 2", width: 10 },
+        { header: "Date 2", width: 17 },
         { header: "At2", width: 7 },
-        { header: "Date 3", width: 10 },
+        { header: "Date 3", width: 17 },
         { header: "At3", width: 7 },
-        { header: "Date 4", width: 10 },
+        { header: "Date 4", width: 17 },
         { header: "At4", width: 7 },
-        { header: "Date 5", width: 10 },
+        { header: "Date 5", width: 17 },
         { header: "At5", width: 7 },
       ];
 
@@ -347,23 +347,23 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
               case 1:
                 // Handle long member names - support 2 lines
                 const memberName = item.customer_name || "";
-                if (memberName.length > 15) {
+                if (memberName.length > 30) {
                   const words = memberName.split(' ');
                   let line1 = '', line2 = '';
                   let currentLine = 1;
                   
                   words.forEach(word => {
-                    if (currentLine === 1 && (line1 + ' ' + word).trim().length <= 15) {
+                    if (currentLine === 1 && (line1 + ' ' + word).trim().length <= 30) {
                       line1 = (line1 + ' ' + word).trim();
                     } else if (currentLine === 1) {
                       currentLine = 2;
                       line2 = word;
-                    } else if ((line2 + ' ' + word).trim().length <= 15) {
+                    } else if ((line2 + ' ' + word).trim().length <= 30) {
                       line2 = (line2 + ' ' + word).trim();
                     }
                   });
                   
-                  if (line2.length > 15) line2 = line2.substring(0, 12) + "...";
+                  if (line2.length > 20) line2 = line2.substring(0, 20) + "...";
                   
                   doc.text(line1, x + 1, y + 4);
                   if (line2) doc.text(line2, x + 1, y + 7);
@@ -373,11 +373,11 @@ export default function PrintPreviewTable({ isOpen, onClose, data = [] }) {
                 break;
               case 2:
                 text = item.gs || "";
-                if (text.length > 13) text = text.substring(0, 13) + "...";
+                if (text.length > 16) text = text.substring(0, 16) + "...";
                 break;
               case 3:
                 const loanTypeText = (item.loanType || "") + (item.type ? ` (${item.type})` : "");
-                text = loanTypeText.length > 13 ? loanTypeText.substring(0, 13) + "..." : loanTypeText;
+                text = loanTypeText.length > 20 ? loanTypeText.substring(0, 20) + "..." : loanTypeText;
                 break;
               case 4:
                 text = item.contact || "";
