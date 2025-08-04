@@ -198,7 +198,7 @@ async function generateExcelReport(filters) {
         : "";
 
       // 2. center = lb.location
-      const centerValue = row.location || "";
+      const centerValue = row.gs || "";
 
       // 3. group = lb.loanTypeMode
       const groupValue = row.group_name
