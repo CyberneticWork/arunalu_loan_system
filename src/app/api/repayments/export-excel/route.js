@@ -85,7 +85,6 @@ async function generateExcelReport(filters) {
         lb.activate_date as activete_date,
         COUNT(rp.id) as payment_count,
         lb.Installment as installment,
-        lb.last_payment as last_payment,
         latest.paymentCount as latest_payment_count
       FROM loan_bussiness lb
       LEFT JOIN customer c ON lb.customerid = c.id
@@ -113,15 +112,16 @@ async function generateExcelReport(filters) {
     const queryParams = [];
 
     if (filters.dateFrom && filters.dateTo) {
-      query += ` AND lb.last_payment BETWEEN ? AND ?`;
-      queryParams.push(
-        `${filters.dateFrom} 00:00:00`,
-        `${filters.dateTo} 23:59:59`
-      );
+      query += ` AND DATE(lb.last_payment) BETWEEN ? AND ?`;
+      queryParams.push(filters.dateFrom, filters.dateTo);
     }
     if (filters.dateFrom && !filters.dateTo) {
-      query += `AND lb.activate_date BETWEEN ? AND ?`; 
- queryParams.push(
+      query += ` AND DATE(lb.activate_date) >= ?`;
+      queryParams.push(filters.dateFrom);
+    }
+    if (filters.dateFrom && !filters.dateTo) {
+      query += `AND lb.activate_date BETWEEN ? AND ?`;
+      queryParams.push(
         `${filters.dateFrom} 00:00:00`,
         `${filters.dateTo} 23:59:59`
       );
@@ -191,12 +191,12 @@ async function generateExcelReport(filters) {
       const dateValue = row.last_payment
         ? new Date(row.last_payment).toISOString().split("T")[0]
         : "";
-
+      console.log("Raw last_payment:", row.last_payment);
       // 1. issueddate = lb.activate_date
-      const issuedDateValue = row.addat
+      const issuedDateValue = row.activate_date
         ? new Date(row.addat).toISOString().split("T")[0]
         : "";
-
+      console.log("Raw addat:", row.addat);
       // 2. center = lb.location
       const centerValue = row.gs || "";
 
@@ -228,7 +228,7 @@ async function generateExcelReport(filters) {
       const totalOutstandingVal = (row.Totalpay || 0) - (row.paid_amount || 0);
 
       // 9. paidAmount = from repayment with highest paymentCount
-    
+
       const paidAmountVal = row.paid_amount || 0;
 
       // Calculate principal paid and interest paid
@@ -236,7 +236,8 @@ async function generateExcelReport(filters) {
       const interestPaid = row.interest_paid || 0;
 
       // Calculate total capital (remaining principal)
-      const totalCapitalVal = (row.loanAmount || 0) - (row.paid_amount-row.interest_paid || 0);
+      const totalCapitalVal =
+        (row.loanAmount || 0) - (row.paid_amount - row.interest_paid || 0);
 
       // Calculate total interest (do not subtract paid interest)
       const totalInterestVal = (row.Totalpay || 0) - (row.loanAmount || 0);
@@ -313,7 +314,8 @@ async function generateExcelReport(filters) {
 
       return {
         date: dateValue,
-        issueddate: issuedDateValue, // <-- added
+
+        issueddate: issuedDateValue,
         center: centerValue,
         group_name: groupValue, // <-- changed
         fullname: customerName,
@@ -335,10 +337,6 @@ async function generateExcelReport(filters) {
 
     // Add rows
     worksheet.addRows(formattedData);
-   
-
-
-
 
     // Style the header row
     worksheet.getRow(1).font = { bold: true };
