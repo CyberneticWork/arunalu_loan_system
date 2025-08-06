@@ -81,7 +81,8 @@ async function generateExcelReport(filters) {
           WHEN latest.balance > 0 THEN latest.balance
           ELSE 0 
         END as over_payment,
-        lb.activate_date as activate_date,
+        lb.last_payment as last_payment,
+        lb.activate_date as activete_date,
         COUNT(rp.id) as payment_count,
         lb.Installment as installment,
         lb.last_payment as last_payment,
@@ -112,8 +113,15 @@ async function generateExcelReport(filters) {
     const queryParams = [];
 
     if (filters.dateFrom && filters.dateTo) {
-      query += ` AND lb.addat BETWEEN ? AND ?`;
+      query += ` AND lb.last_payment BETWEEN ? AND ?`;
       queryParams.push(
+        `${filters.dateFrom} 00:00:00`,
+        `${filters.dateTo} 23:59:59`
+      );
+    }
+    if (filters.dateFrom && !filters.dateTo) {
+      query += `AND lb.activate_date BETWEEN ? AND ?`; 
+ queryParams.push(
         `${filters.dateFrom} 00:00:00`,
         `${filters.dateTo} 23:59:59`
       );
@@ -146,7 +154,8 @@ async function generateExcelReport(filters) {
 
     // Rearrange columns and modify row mapping:
     worksheet.columns = [
-      { header: "Date", key: "date", width: 12 },
+      { header: "Last Payment Date", key: "date", width: 12 },
+      { header: "Loan issued Date", key: "issueddate", width: 12 },
       { header: "Customer Name", key: "fullname", width: 20 },
       { header: "Group", key: "group_name", width: 12 }, // <-- changed
       { header: "Center", key: "center", width: 12 },
@@ -179,12 +188,17 @@ async function generateExcelReport(filters) {
     // Format database rows to match expected structure with clearer mapping
     const formattedData = rows.map((row) => {
       // 1. date = lb.addat
-      const dateValue = row.addat
+      const dateValue = row.last_payment
+        ? new Date(row.last_payment).toISOString().split("T")[0]
+        : "";
+
+      // 1. issueddate = lb.activate_date
+      const issuedDateValue = row.addat
         ? new Date(row.addat).toISOString().split("T")[0]
         : "";
 
       // 2. center = lb.location
-      const centerValue = row.location || "";
+      const centerValue = row.gs || "";
 
       // 3. group = lb.loanTypeMode
       const groupValue = row.group_name
@@ -299,6 +313,7 @@ async function generateExcelReport(filters) {
 
       return {
         date: dateValue,
+        issueddate: issuedDateValue, // <-- added
         center: centerValue,
         group_name: groupValue, // <-- changed
         fullname: customerName,
@@ -320,6 +335,10 @@ async function generateExcelReport(filters) {
 
     // Add rows
     worksheet.addRows(formattedData);
+   
+
+
+
 
     // Style the header row
     worksheet.getRow(1).font = { bold: true };
