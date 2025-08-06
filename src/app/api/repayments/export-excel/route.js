@@ -85,7 +85,6 @@ async function generateExcelReport(filters) {
         lb.activate_date as activete_date,
         COUNT(rp.id) as payment_count,
         lb.Installment as installment,
-        lb.last_payment as last_payment,
         latest.paymentCount as latest_payment_count
       FROM loan_bussiness lb
       LEFT JOIN customer c ON lb.customerid = c.id
@@ -184,9 +183,7 @@ async function generateExcelReport(filters) {
     const formattedData = rows.map((row) => {
       // 1. date = lb.addat
       const dateValue = row.last_payment
-      
         ? new Date(row.last_payment).toISOString().split("T")[0]
-        
         : "";
  console.log('Raw last_payment:', row.last_payment);
       // 1. issueddate = lb.activate_date
