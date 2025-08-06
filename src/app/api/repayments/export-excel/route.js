@@ -189,7 +189,7 @@ async function generateExcelReport(filters) {
     const formattedData = rows.map((row) => {
       // 1. date = lb.addat
       const dateValue = row.last_payment
-        ? new Date(row.last_payment).toISOString().split("T")[0]
+        ? new Date(row.last_payment).toLocaleDateString("en-CA") // Uses YYYY-MM-DD format without timezone offset
         : "";
       console.log("Raw last_payment:", row.last_payment);
       // 1. issueddate = lb.activate_date
