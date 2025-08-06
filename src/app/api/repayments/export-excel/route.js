@@ -112,19 +112,14 @@ async function generateExcelReport(filters) {
 
     const queryParams = [];
 
-    if (filters.dateFrom && filters.dateTo) {
-      query += ` AND lb.last_payment BETWEEN ? AND ?`;
-      queryParams.push(
-        `${filters.dateFrom} 00:00:00`,
-        `${filters.dateTo} 23:59:59`
-      );
+   if (filters.dateFrom && filters.dateTo) {
+      query += ` AND DATE(lb.last_payment) BETWEEN ? AND ?`;
+      queryParams.push(filters.dateFrom, filters.dateTo);
+     
     }
     if (filters.dateFrom && !filters.dateTo) {
-      query += `AND lb.activate_date BETWEEN ? AND ?`; 
- queryParams.push(
-        `${filters.dateFrom} 00:00:00`,
-        `${filters.dateTo} 23:59:59`
-      );
+      query += ` AND DATE(lb.activate_date) >= ?`;
+      queryParams.push(filters.dateFrom);
     }
 
     if (filters.status && filters.status !== "all") {
@@ -189,14 +184,16 @@ async function generateExcelReport(filters) {
     const formattedData = rows.map((row) => {
       // 1. date = lb.addat
       const dateValue = row.last_payment
+      
         ? new Date(row.last_payment).toISOString().split("T")[0]
+        
         : "";
-
+ console.log('Raw last_payment:', row.last_payment);
       // 1. issueddate = lb.activate_date
-      const issuedDateValue = row.addat
+      const issuedDateValue = row.activate_date
         ? new Date(row.addat).toISOString().split("T")[0]
         : "";
-
+ console.log('Raw addat:', row.addat);
       // 2. center = lb.location
       const centerValue = row.gs || "";
 
@@ -313,7 +310,8 @@ async function generateExcelReport(filters) {
 
       return {
         date: dateValue,
-        issueddate: issuedDateValue, // <-- added
+
+        issueddate: issuedDateValue, 
         center: centerValue,
         group_name: groupValue, // <-- changed
         fullname: customerName,
