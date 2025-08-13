@@ -14,14 +14,57 @@ export async function GET(req) {
   if (
     action !== "getAll" &&
     action !== "getTodayExpenses" &&
-    action !== "getTotalLoanCash"
+    action !== "getTotalLoanCash" &&
+    action !== "getFilteredExpenses"  // Add the new action
   ) {
     return new Response(JSON.stringify({ error: "Invalid action specified" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
   }
-  if (action === "getTodayExpenses") {
+
+  // Add handler for the new action
+  if (action === "getFilteredExpenses") {
+    try {
+      const startDate = searchParams.get("startDate");
+      const endDate = searchParams.get("endDate");
+      
+      if (!startDate || !endDate) {
+        return new Response(
+          JSON.stringify({ 
+            code: "ERROR", 
+            message: "Start date and end date are required" 
+          }),
+          { status: 400 }
+        );
+      }
+      
+      connection = await connectDB();
+      const [rows] = await connection.execute(`
+        SELECT SUM(amount) AS totalExpenses 
+        FROM cashbook 
+        WHERE type = 'expense' 
+        AND DATE(created_at) >= ? 
+        AND DATE(created_at) <= ?;
+      `, [startDate, endDate]);
+      
+      await connection.end();
+
+      return new Response(
+        JSON.stringify({ 
+          code: "SUCCESS", 
+          totalExpenses: rows[0].totalExpenses || 0 
+        }),
+        { status: 200 }
+      );
+    } catch (error) {
+      if (connection) await connection.end();
+      return new Response(
+        JSON.stringify({ code: "ERROR", message: error.message }),
+        { status: 500 }
+      );
+    }
+  } else if (action === "getTodayExpenses") {
     try {
       connection = await connectDB();
       const [rows] = await connection.execute(`

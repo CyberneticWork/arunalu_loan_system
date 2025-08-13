@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   DollarSign,
@@ -15,6 +15,19 @@ import {
   CheckCircle,
 } from "lucide-react";
 
+// Filtering helper
+const filterTransactionsByDateAndType = (transactions, dateFrom, dateTo, type) => {
+  return transactions.filter((t) => {
+    const d = new Date(t.date);
+    const start = dateFrom ? new Date(dateFrom) : null;
+    const end = dateTo ? new Date(dateTo) : null;
+    if (type !== "all" && t.type !== type) return false;
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  });
+};
+
 const Cashbook = () => {
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,36 +42,36 @@ const Cashbook = () => {
     method: "cash",
   });
 
-  // Pagination state
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage] = useState(10);
 
   const [showDepositForm, setShowDepositForm] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
-  const [depositDescription, setDepositDescription] = useState(
-    "Cash deposit to bank"
-  );
+  const [depositDescription, setDepositDescription] = useState("Cash deposit to bank");
+
+  const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
+  const [withdrawalAmount, setWithdrawalAmount] = useState("");
+  const [withdrawalDescription, setWithdrawalDescription] = useState("Cash withdrawal from bank");
+
   const [netCash, setNetCash] = useState(0);
   const [totalbankValue, setTotalbankValue] = useState(0);
   const [totalOutstanding, setTotalOutstanding] = useState(0);
   const [totalIncomeInterest, setTotalIncomeInterest] = useState(0);
   const [totalArrears, setTotalArrears] = useState(0);
   const [totalOverpayment, setTotalOverpayment] = useState(0);
-
-  const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
-  const [withdrawalAmount, setWithdrawalAmount] = useState("");
-  const [withdrawalDescription, setWithdrawalDescription] = useState(
-    "Cash withdrawal from bank"
-  );
   const [totalServiceCharge, setTotalServiceCharge] = useState(0);
 
-  // Fetch transactions on component mount
+  // Quick filter state
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
   useEffect(() => {
     fetchTransactions();
     fetchTodayExpenses();
   }, []);
 
-  // Fetch overpayment and arrears summary
   useEffect(() => {
     const fetchSummary = async () => {
       try {
@@ -66,11 +79,9 @@ const Cashbook = () => {
         const data = await res.json();
         if (data.code === "SUCCESS") {
           setTotalArrears(data.totalArrears || 0);
-          setTotalOverpayment(data.totalOverpayment || 0);
+            setTotalOverpayment(data.totalOverpayment || 0);
         }
-      } catch (e) {
-        // Optionally handle error
-      }
+      } catch {}
     };
     fetchSummary();
   }, []);
@@ -78,54 +89,37 @@ const Cashbook = () => {
   const fetchTransactions = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/cashbook?action=getAll");
-      const result = await response.json();
-
+      const res = await fetch("/api/cashbook?action=getAll");
+      const result = await res.json();
       if (result.code === "SUCCESS") {
         setTransactions(
-          result.data.map((item) => ({
-            ...item,
-            amount: parseFloat(item.amount),
-          }))
+          result.data.map((r) => ({ ...r, amount: parseFloat(r.amount) }))
         );
-        // console.log("Transactions fetched successfully:", result.TotalBank);
         setNetCash(result.TotalCash);
         setTotalbankValue(result.TotalBank);
         setTotalOutstanding(result.TotalOutstanding);
-        console.log(result.TotalIncomeInterest);
         setTotalIncomeInterest(result.TotalIncomeInterest);
         setTotalServiceCharge(result.TotalServiceCharge || 0);
       } else {
-        console.error("Failed to fetch transactions:", result.message);
-        alert("Failed to load transactions. Please try again.");
+        alert("Failed to load transactions");
       }
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
-      alert("Error loading transactions. Please try again.");
+    } catch {
+      alert("Error loading transactions");
     } finally {
       setIsLoading(false);
     }
   };
 
-  //fetch today expenses
   const fetchTodayExpenses = async () => {
     try {
-      const response = await fetch("/api/cashbook?action=getTodayExpenses");
-      const result = await response.json();
-
+      const res = await fetch("/api/cashbook?action=getTodayExpenses");
+      const result = await res.json();
       if (result.code === "SUCCESS") {
         setTodayExpenses(result.data[0].TotalAmount || 0);
-      } else {
-        console.error("Failed to fetch today's expenses:", result.message);
-        alert("Failed to load today's expenses. Please try again.");
       }
-    } catch (error) {
-      console.error("Error fetching today's expenses:", error);
-      alert("Error loading today's expenses. Please try again.");
-    }
+    } catch {}
   };
 
-  // Calculate totals
   const cashTransactions = transactions.filter((t) => t.method === "cash");
   const bankTransactions = transactions.filter((t) => t.method === "bank");
   const expenses = transactions.filter((t) => t.type === "expense");
@@ -133,252 +127,223 @@ const Cashbook = () => {
   const cashAmount = cashTransactions.reduce((sum, t) => {
     if (t.type === "income") return sum + t.amount;
     if (t.type === "expense") return sum - t.amount;
-    if (t.type === "deposit") return sum - t.amount; // Cash out for deposit
-    if (t.type === "withdrawal") return sum + t.amount; // Cash in from withdrawal
+    if (t.type === "deposit") return sum - t.amount;
+    if (t.type === "withdrawal") return sum + t.amount;
     return sum;
   }, 0);
 
   const bankValue = bankTransactions.reduce((sum, t) => {
     if (t.type === "income") return sum + t.amount;
     if (t.type === "expense") return sum - t.amount;
-    if (t.type === "deposit") return sum - t.amount; // Bank out for deposit
-    if (t.type === "withdrawal") return sum + t.amount; // Bank in from withdrawal
+    if (t.type === "deposit") return sum - t.amount;
+    if (t.type === "withdrawal") return sum + t.amount;
     return sum;
   }, 0);
 
-  const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
+  const totalExpenses = expenses.reduce((s, t) => s + t.amount, 0);
 
-  // Pagination logic
+  // Filtered transactions (only quick filters now)
+  const filteredTransactions = useMemo(
+    () =>
+      filterTransactionsByDateAndType(
+        transactions,
+        dateFrom,
+        dateTo,
+        transactionTypeFilter
+      ),
+    [transactions, dateFrom, dateTo, transactionTypeFilter]
+  );
+
+  // Pagination
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentTransactions = transactions.slice(
+  const currentTransactions = filteredTransactions.slice(
     indexOfFirstRow,
     indexOfLastRow
   );
-  const totalPages = Math.ceil(transactions.length / rowsPerPage);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / rowsPerPage));
 
   const goToFirstPage = () => setCurrentPage(1);
   const goToLastPage = () => setCurrentPage(totalPages);
-  const goToPreviousPage = () =>
-    setCurrentPage((prev) => Math.max(prev - 1, 1));
-  const goToNextPage = () =>
-    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  const goToPreviousPage = () => setCurrentPage((p) => Math.max(p - 1, 1));
+  const goToNextPage = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
 
   const handleSubmit = async () => {
     if (
-      newTransaction.description &&
-      newTransaction.amount &&
-      newTransaction.category
+      !newTransaction.description ||
+      !newTransaction.amount ||
+      !newTransaction.category
     ) {
-      const amount = parseFloat(newTransaction.amount);
-      if (
-        newTransaction.type === "expense" &&
-        newTransaction.method === "cash" &&
-        amount > netCash
-      ) {
-        alert("Insufficient cash balance for this expense.");
-        return;
-      }
-      if (
-        newTransaction.type === "expense" &&
-        newTransaction.method === "bank" &&
-        amount > totalbankValue
-      ) {
-        alert("Insufficient bank balance for this expense.");
-        return;
-      }
-
-      try {
-        const response = await fetch("/api/cashbook", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...newTransaction,
-            amount: parseFloat(newTransaction.amount),
-          }),
+      alert("Fill all fields");
+      return;
+    }
+    const amount = parseFloat(newTransaction.amount);
+    if (
+      newTransaction.type === "expense" &&
+      newTransaction.method === "cash" &&
+      amount > netCash
+    ) {
+      alert("Insufficient cash");
+      return;
+    }
+    if (
+      newTransaction.type === "expense" &&
+      newTransaction.method === "bank" &&
+      amount > totalbankValue
+    ) {
+      alert("Insufficient bank balance");
+      return;
+    }
+    try {
+      const res = await fetch("/api/cashbook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newTransaction, amount }),
+      });
+      const result = await res.json();
+      if (result.code === "SUCCESS") {
+        setTransactions([
+          { id: result.id, ...newTransaction, amount },
+          ...transactions,
+        ]);
+        setNewTransaction({
+          date: new Date().toISOString().split("T")[0],
+          description: "",
+          type: "expense",
+          amount: "",
+          category: "",
+          method: "cash",
         });
-
-        const result = await response.json();
-
-        if (result.code === "SUCCESS") {
-          // Add the new transaction to the state with the ID from the response
-          const transaction = {
-            id: result.id,
-            ...newTransaction,
-            amount: parseFloat(newTransaction.amount),
-          };
-          setTransactions([transaction, ...transactions]);
-
-          // Reset form
-          setNewTransaction({
-            date: new Date().toISOString().split("T")[0],
-            description: "",
-            type: "expense",
-            amount: "",
-            category: "",
-            method: "cash",
-          });
-          setShowForm(false);
-
-          // Optionally refresh data from server
-          fetchTransactions();
-          fetchTodayExpenses();
-        } else {
-          alert(`Failed to add transaction: ${result.message}`);
-        }
-      } catch (error) {
-        console.error("Error adding transaction:", error);
-        alert("Error adding transaction. Please try again.");
+        setShowForm(false);
+        fetchTransactions();
+        fetchTodayExpenses();
+      } else {
+        alert("Add failed");
       }
-    } else {
-      alert("Please fill in all required fields.");
+    } catch {
+      alert("Error adding");
     }
   };
 
-  // Deposit function to transfer money from cash to bank
   const handleDeposit = async () => {
-    if (
-      !depositAmount ||
-      isNaN(parseFloat(depositAmount)) ||
-      parseFloat(depositAmount) <= 0
-    ) {
-      alert("Please enter a valid deposit amount");
+    if (!depositAmount || parseFloat(depositAmount) <= 0) {
+      alert("Enter valid amount");
       return;
     }
-
     const amount = parseFloat(depositAmount);
-
-    // Check if we have enough cash
     if (amount > cashAmount) {
-      alert("Insufficient cash balance for this deposit");
+      alert("Insufficient cash");
       return;
     }
-
     try {
-      // First transaction - cash out (treated as deposit from cash)
-      const cashResponse = await fetch("/api/cashbook", {
+      const cashRes = await fetch("/api/cashbook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: new Date().toISOString().split("T")[0],
-          description: `${depositDescription} (Cash out)`,
-          type: "deposit", // Changed from "withdrawal" to "deposit"
-          amount: amount,
+            description: `${depositDescription} (Cash out)`,
+          type: "deposit",
+          amount,
           category: "Bank Deposit",
           method: "cash",
         }),
       });
-
-      // Second transaction - bank in (treated as withdrawal to bank)
-      const bankResponse = await fetch("/api/cashbook", {
+      const bankRes = await fetch("/api/cashbook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: new Date().toISOString().split("T")[0],
           description: `${depositDescription} (Bank in)`,
-          type: "withdrawal", // Changed from "deposit" to "withdrawal"
-          amount: amount,
+          type: "withdrawal",
+          amount,
           category: "Bank Deposit",
           method: "bank",
         }),
       });
-
-      const cashResult = await cashResponse.json();
-      const bankResult = await bankResponse.json();
-
-      if (cashResult.code === "SUCCESS" && bankResult.code === "SUCCESS") {
+      const cR = await cashRes.json();
+      const bR = await bankRes.json();
+      if (cR.code === "SUCCESS" && bR.code === "SUCCESS") {
         setDepositAmount("");
         setDepositDescription("Cash deposit to bank");
         setShowDepositForm(false);
-
-        // Refresh data
         fetchTransactions();
-        alert("Deposit completed successfully");
       } else {
-        alert("Error processing deposit. Please try again.");
+        alert("Deposit failed");
       }
-    } catch (error) {
-      console.error("Error during deposit:", error);
-      alert("Error processing deposit. Please try again.");
+    } catch {
+      alert("Deposit error");
     }
   };
 
-  // Withdraw function to get cash from bank
   const handleWithdrawal = async () => {
-    if (
-      !withdrawalAmount ||
-      isNaN(parseFloat(withdrawalAmount)) ||
-      parseFloat(withdrawalAmount) <= 0
-    ) {
-      alert("Please enter a valid withdrawal amount");
+    if (!withdrawalAmount || parseFloat(withdrawalAmount) <= 0) {
+      alert("Enter valid amount");
       return;
     }
-
     const amount = parseFloat(withdrawalAmount);
-
-    // Check if we have enough bank balance
     if (amount > bankValue) {
-      alert("Insufficient bank balance for this withdrawal");
+      alert("Insufficient bank balance");
       return;
     }
-
     try {
-      // First transaction - bank out (treated as deposit from bank)
-      const bankResponse = await fetch("/api/cashbook", {
+      const bankRes = await fetch("/api/cashbook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: new Date().toISOString().split("T")[0],
           description: `${withdrawalDescription} (Bank out)`,
-          type: "deposit", // Bank out is a deposit type
-          amount: amount,
+          type: "deposit",
+          amount,
           category: "Bank Withdrawal",
           method: "bank",
         }),
       });
-
-      // Second transaction - cash in (treated as withdrawal to cash)
-      const cashResponse = await fetch("/api/cashbook", {
+      const cashRes = await fetch("/api/cashbook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: new Date().toISOString().split("T")[0],
           description: `${withdrawalDescription} (Cash in)`,
-          type: "withdrawal", // Cash in is a withdrawal type
-          amount: amount,
+          type: "withdrawal",
+          amount,
           category: "Bank Withdrawal",
           method: "cash",
         }),
       });
-
-      const bankResult = await bankResponse.json();
-      const cashResult = await cashResponse.json();
-
-      if (bankResult.code === "SUCCESS" && cashResult.code === "SUCCESS") {
+      const bR = await bankRes.json();
+      const cR = await cashRes.json();
+      if (bR.code === "SUCCESS" && cR.code === "SUCCESS") {
         setWithdrawalAmount("");
         setWithdrawalDescription("Cash withdrawal from bank");
         setShowWithdrawalForm(false);
-
-        // Refresh data
         fetchTransactions();
-        alert("Withdrawal completed successfully");
       } else {
-        alert("Error processing withdrawal. Please try again.");
+        alert("Withdrawal failed");
       }
-    } catch (error) {
-      console.error("Error during withdrawal:", error);
-      alert("Error processing withdrawal. Please try again.");
+    } catch {
+      alert("Withdrawal error");
     }
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-LK", {
+  const quickFilterExpenseTotal = useMemo(() => {
+    if (!dateFrom && !dateTo) return 0;
+    return transactions.reduce((sum, t) => {
+      if (t.type !== "expense") return sum;
+      const d = new Date(t.date);
+      const start = dateFrom ? new Date(dateFrom) : null;
+      const end = dateTo ? new Date(dateTo) : null;
+      if (start && d < start) return sum;
+      if (end && d > end) return sum;
+      return sum + t.amount;
+    }, 0);
+  }, [transactions, dateFrom, dateTo]);
+
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat("en-LK", {
       style: "currency",
       currency: "LKR",
     }).format(amount || 0);
-  };
+
   const cardData = [
     {
       title: "Cash Amount",
@@ -406,7 +371,7 @@ const Cashbook = () => {
     },
     {
       title: "Total Loan Value",
-      value: Math.abs(totalOutstanding), // <-- Ensure always positive
+      value: Math.abs(totalOutstanding),
       color: bankValue >= 0 ? "blue" : "red",
       iconBg: "bg-blue-100",
       iconColor: "text-blue-600",
@@ -429,6 +394,7 @@ const Cashbook = () => {
       Icon: CreditCard,
     },
   ];
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -437,15 +403,12 @@ const Cashbook = () => {
           <p className="text-gray-600">Manage your cash flow and expenses</p>
         </div>
 
-        {/* Arrears and Overpayment Cards */}
+        {/* Arrears / Overpayment */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Arrears Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
-                  Arrears
-                </p>
+                <p className="text-sm font-medium text-gray-600 mb-1">Arrears</p>
                 <p className="text-2xl font-bold text-red-600">
                   {formatCurrency(totalArrears)}
                 </p>
@@ -455,7 +418,6 @@ const Cashbook = () => {
               </div>
             </div>
           </div>
-          {/* Overpayment Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -473,32 +435,31 @@ const Cashbook = () => {
           </div>
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Cash Amount Card */}
-          {cardData.map((card, index) => (
+          {cardData.map((c, i) => (
             <div
-              key={index}
+              key={i}
               className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
             >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">
-                    {card.title}
+                    {c.title}
                   </p>
-                  <p className={`text-2xl font-bold text-${card.color}-600`}>
-                    {formatCurrency(card.value)}
+                  <p className={`text-2xl font-bold text-${c.color}-600`}>
+                    {formatCurrency(c.value)}
                   </p>
                 </div>
-                <div className={`p-3 ${card.iconBg} rounded-full`}>
-                  <card.Icon className={`h-6 w-6 ${card.iconColor}`} />
+                <div className={`p-3 ${c.iconBg} rounded-full`}>
+                  <c.Icon className={`h-6 w-6 ${c.iconColor}`} />
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Transactions Table */}
+        {/* Transactions */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">
@@ -511,10 +472,9 @@ const Cashbook = () => {
                   setShowDepositForm(false);
                   setShowWithdrawalForm(false);
                 }}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Transaction
+                <Plus className="h-4 w-4 mr-2" /> Add Transaction
               </button>
               <button
                 onClick={() => {
@@ -522,10 +482,9 @@ const Cashbook = () => {
                   setShowForm(false);
                   setShowWithdrawalForm(false);
                 }}
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
               >
-                <ArrowRight className="h-4 w-4 mr-2" />
-                Deposit to Bank
+                <ArrowRight className="h-4 w-4 mr-2" /> Deposit to Bank
               </button>
               <button
                 onClick={() => {
@@ -533,15 +492,13 @@ const Cashbook = () => {
                   setShowForm(false);
                   setShowDepositForm(false);
                 }}
-                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Get Cash from Bank
+                <ArrowLeft className="h-4 w-4 mr-2" /> Get Cash from Bank
               </button>
             </div>
           </div>
 
-          {/* Add Transaction Form */}
           {showForm && (
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
@@ -549,12 +506,9 @@ const Cashbook = () => {
                   type="date"
                   value={newTransaction.date}
                   onChange={(e) =>
-                    setNewTransaction({
-                      ...newTransaction,
-                      date: e.target.value,
-                    })
+                    setNewTransaction({ ...newTransaction, date: e.target.value })
                   }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border rounded-lg text-sm"
                   required
                 />
                 <input
@@ -567,23 +521,18 @@ const Cashbook = () => {
                       description: e.target.value,
                     })
                   }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border rounded-lg text-sm"
                   required
                 />
                 <select
                   value={newTransaction.type}
                   onChange={(e) =>
-                    setNewTransaction({
-                      ...newTransaction,
-                      type: e.target.value,
-                    })
+                    setNewTransaction({ ...newTransaction, type: e.target.value })
                   }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border rounded-lg text-sm"
                 >
                   <option value="expense">Expense</option>
                   <option value="income">Income</option>
-                  {/* <option value="deposit">Deposit</option>
-                  <option value="withdrawal">Withdrawal</option> */}
                 </select>
                 <input
                   type="number"
@@ -596,7 +545,7 @@ const Cashbook = () => {
                       amount: e.target.value,
                     })
                   }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border rounded-lg text-sm"
                   required
                 />
                 <input
@@ -609,18 +558,15 @@ const Cashbook = () => {
                       category: e.target.value,
                     })
                   }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border rounded-lg text-sm"
                   required
                 />
                 <select
                   value={newTransaction.method}
                   onChange={(e) =>
-                    setNewTransaction({
-                      ...newTransaction,
-                      method: e.target.value,
-                    })
+                    setNewTransaction({ ...newTransaction, method: e.target.value })
                   }
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border rounded-lg text-sm"
                 >
                   <option value="cash">Cash</option>
                   <option value="bank">Bank</option>
@@ -628,13 +574,13 @@ const Cashbook = () => {
                 <div className="md:col-span-6 flex gap-2">
                   <button
                     onClick={handleSubmit}
-                    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg"
                   >
                     Add Transaction
                   </button>
                   <button
                     onClick={() => setShowForm(false)}
-                    className="px-4 py-2 bg-gray-500 text-white text-sm font-medium rounded-lg hover:bg-gray-600 transition-colors"
+                    className="px-4 py-2 bg-gray-500 text-white text-sm rounded-lg"
                   >
                     Cancel
                   </button>
@@ -643,7 +589,6 @@ const Cashbook = () => {
             </div>
           )}
 
-          {/* Deposit Form */}
           {showDepositForm && (
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
@@ -653,27 +598,25 @@ const Cashbook = () => {
                   placeholder="Deposit Amount"
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
+                  className="px-3 py-2 border rounded-lg text-sm"
                 />
                 <input
                   type="text"
                   placeholder="Description"
                   value={depositDescription}
                   onChange={(e) => setDepositDescription(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
+                  className="px-3 py-2 border rounded-lg text-sm"
                 />
                 <div className="md:col-span-6 flex gap-2">
                   <button
                     onClick={handleDeposit}
-                    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg"
                   >
                     Confirm Deposit
                   </button>
                   <button
                     onClick={() => setShowDepositForm(false)}
-                    className="px-4 py-2 bg-gray-500 text-white text-sm font-medium rounded-lg hover:bg-gray-600 transition-colors"
+                    className="px-4 py-2 bg-gray-500 text-white text-sm rounded-lg"
                   >
                     Cancel
                   </button>
@@ -682,7 +625,6 @@ const Cashbook = () => {
             </div>
           )}
 
-          {/* Withdrawal Form */}
           {showWithdrawalForm && (
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
@@ -692,27 +634,25 @@ const Cashbook = () => {
                   placeholder="Withdrawal Amount"
                   value={withdrawalAmount}
                   onChange={(e) => setWithdrawalAmount(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
+                  className="px-3 py-2 border rounded-lg text-sm"
                 />
                 <input
                   type="text"
                   placeholder="Description"
                   value={withdrawalDescription}
                   onChange={(e) => setWithdrawalDescription(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
+                  className="px-3 py-2 border rounded-lg text-sm"
                 />
                 <div className="md:col-span-6 flex gap-2">
                   <button
                     onClick={handleWithdrawal}
-                    className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                    className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg"
                   >
                     Get Cash
                   </button>
                   <button
                     onClick={() => setShowWithdrawalForm(false)}
-                    className="px-4 py-2 bg-gray-500 text-white text-sm font-medium rounded-lg hover:bg-gray-600 transition-colors"
+                    className="px-4 py-2 bg-gray-500 text-white text-sm rounded-lg"
                   >
                     Cancel
                   </button>
@@ -721,18 +661,90 @@ const Cashbook = () => {
             </div>
           )}
 
+          {/* Quick Filters */}
+            <div className="flex flex-wrap gap-3 mb-4 px-6 py-4 bg-gray-50 border-b border-gray-200 items-end">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                Type
+              </label>
+              <select
+                value={transactionTypeFilter}
+                onChange={(e) => {
+                  setTransactionTypeFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="border rounded px-3 py-2 text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+                <option value="deposit">Deposit</option>
+                <option value="withdrawal">Withdrawal</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                From
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="border rounded px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                To
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="border rounded px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-500">
+                Expense Total:
+              </span>
+              <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+                {dateFrom || dateTo ? formatCurrency(quickFilterExpenseTotal) : "--"}
+              </span>
+              {(dateFrom || dateTo || transactionTypeFilter !== "all") && (
+                <button
+                  onClick={() => {
+                    setDateFrom("");
+                    setDateTo("");
+                    setTransactionTypeFilter("all");
+                    setCurrentPage(1);
+                  }}
+                  className="text-xs px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded font-medium"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             {isLoading ? (
               <div className="p-8 text-center text-gray-500">
                 Loading transactions...
               </div>
-            ) : transactions.length === 0 ? (
+            ) : filteredTransactions.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
-                No transactions found. Add a transaction to get started.
+                No transactions match filters.
               </div>
             ) : (
               <>
-                <table className="w-full">
+                <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -756,80 +768,72 @@ const Cashbook = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {currentTransactions.map((transaction) => (
-                      <tr key={transaction.id} className="hover:bg-gray-50">
+                    {currentTransactions.map((t) => (
+                      <tr key={t.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(transaction.date).toLocaleDateString()}
+                          {new Date(t.date).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {transaction.description}
+                          {t.description}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              transaction.type === "income" ||
-                              (transaction.type === "withdrawal" &&
-                                transaction.method === "bank") ||
-                              (transaction.type === "withdrawal" &&
-                                transaction.method === "cash")
+                              t.type === "income" ||
+                              (t.type === "withdrawal" && t.method === "bank") ||
+                              (t.type === "withdrawal" && t.method === "cash")
                                 ? "bg-green-100 text-green-800"
-                                : transaction.type === "expense" ||
-                                  (transaction.type === "deposit" &&
-                                    transaction.method === "cash") ||
-                                  (transaction.type === "deposit" &&
-                                    transaction.method === "bank")
+                                : t.type === "expense" ||
+                                  (t.type === "deposit" && t.method === "cash") ||
+                                  (t.type === "deposit" && t.method === "bank")
                                 ? "bg-red-100 text-red-800"
                                 : "bg-purple-100 text-purple-800"
                             }`}
                           >
-                            {transaction.type}
+                            {t.type}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.category}
+                          {t.category}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              transaction.method === "cash"
+                              t.method === "cash"
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-blue-100 text-blue-800"
                             }`}
                           >
-                            {transaction.method}
+                            {t.method}
                           </span>
                         </td>
                         <td
                           className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
-                            transaction.type === "income" ||
-                            (transaction.type === "withdrawal" &&
-                              transaction.method === "bank") ||
-                            (transaction.type === "withdrawal" &&
-                              transaction.method === "cash")
+                            t.type === "income" ||
+                            (t.type === "withdrawal" && t.method === "bank") ||
+                            (t.type === "withdrawal" && t.method === "cash")
                               ? "text-green-600"
                               : "text-red-600"
                           }`}
                         >
-                          {transaction.type === "income" ||
-                          (transaction.type === "withdrawal" &&
-                            transaction.method === "bank") ||
-                          (transaction.type === "withdrawal" &&
-                            transaction.method === "cash")
+                          {t.type === "income" ||
+                          (t.type === "withdrawal" && t.method === "bank") ||
+                          (t.type === "withdrawal" && t.method === "cash")
                             ? "+"
                             : "-"}
-                          {formatCurrency(transaction.amount)}
+                          {formatCurrency(t.amount)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
 
-                {/* Pagination Controls */}
                 <div className="px-6 py-4 bg-white border-t border-gray-200 flex items-center justify-between">
                   <div className="text-sm text-gray-500">
-                    Showing {indexOfFirstRow + 1} to{" "}
-                    {Math.min(indexOfLastRow, transactions.length)} of{" "}
-                    {transactions.length} transactions
+                    Showing{" "}
+                    {filteredTransactions.length === 0 ? 0 : indexOfFirstRow + 1} to{" "}
+                    {Math.min(indexOfLastRow, filteredTransactions.length)} of{" "}
+                    {filteredTransactions.length} transactions
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
