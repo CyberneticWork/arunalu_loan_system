@@ -16,7 +16,12 @@ import {
 } from "lucide-react";
 
 // Filtering helper
-const filterTransactionsByDateAndType = (transactions, dateFrom, dateTo, type) => {
+const filterTransactionsByDateAndType = (
+  transactions,
+  dateFrom,
+  dateTo,
+  type
+) => {
   return transactions.filter((t) => {
     const d = new Date(t.date);
     const start = dateFrom ? new Date(dateFrom) : null;
@@ -48,11 +53,15 @@ const Cashbook = () => {
 
   const [showDepositForm, setShowDepositForm] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
-  const [depositDescription, setDepositDescription] = useState("Cash deposit to bank");
+  const [depositDescription, setDepositDescription] = useState(
+    "Cash deposit to bank"
+  );
 
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
-  const [withdrawalDescription, setWithdrawalDescription] = useState("Cash withdrawal from bank");
+  const [withdrawalDescription, setWithdrawalDescription] = useState(
+    "Cash withdrawal from bank"
+  );
 
   const [netCash, setNetCash] = useState(0);
   const [totalbankValue, setTotalbankValue] = useState(0);
@@ -79,7 +88,7 @@ const Cashbook = () => {
         const data = await res.json();
         if (data.code === "SUCCESS") {
           setTotalArrears(data.totalArrears || 0);
-            setTotalOverpayment(data.totalOverpayment || 0);
+          setTotalOverpayment(data.totalOverpayment || 0);
         }
       } catch {}
     };
@@ -161,7 +170,10 @@ const Cashbook = () => {
     indexOfFirstRow,
     indexOfLastRow
   );
-  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / rowsPerPage));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredTransactions.length / rowsPerPage)
+  );
 
   const goToFirstPage = () => setCurrentPage(1);
   const goToLastPage = () => setCurrentPage(totalPages);
@@ -241,7 +253,7 @@ const Cashbook = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: new Date().toISOString().split("T")[0],
-            description: `${depositDescription} (Cash out)`,
+          description: `${depositDescription} (Cash out)`,
           type: "deposit",
           amount,
           category: "Bank Deposit",
@@ -408,7 +420,9 @@ const Cashbook = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Arrears</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  Arrears
+                </p>
                 <p className="text-2xl font-bold text-red-600">
                   {formatCurrency(totalArrears)}
                 </p>
@@ -506,7 +520,10 @@ const Cashbook = () => {
                   type="date"
                   value={newTransaction.date}
                   onChange={(e) =>
-                    setNewTransaction({ ...newTransaction, date: e.target.value })
+                    setNewTransaction({
+                      ...newTransaction,
+                      date: e.target.value,
+                    })
                   }
                   className="px-3 py-2 border rounded-lg text-sm"
                   required
@@ -527,7 +544,10 @@ const Cashbook = () => {
                 <select
                   value={newTransaction.type}
                   onChange={(e) =>
-                    setNewTransaction({ ...newTransaction, type: e.target.value })
+                    setNewTransaction({
+                      ...newTransaction,
+                      type: e.target.value,
+                    })
                   }
                   className="px-3 py-2 border rounded-lg text-sm"
                 >
@@ -564,7 +584,10 @@ const Cashbook = () => {
                 <select
                   value={newTransaction.method}
                   onChange={(e) =>
-                    setNewTransaction({ ...newTransaction, method: e.target.value })
+                    setNewTransaction({
+                      ...newTransaction,
+                      method: e.target.value,
+                    })
                   }
                   className="px-3 py-2 border rounded-lg text-sm"
                 >
@@ -662,7 +685,7 @@ const Cashbook = () => {
           )}
 
           {/* Quick Filters */}
-            <div className="flex flex-wrap gap-3 mb-4 px-6 py-4 bg-gray-50 border-b border-gray-200 items-end">
+          <div className="flex flex-wrap gap-3 mb-4 px-6 py-4 bg-gray-50 border-b border-gray-200 items-end">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
                 Type
@@ -715,7 +738,9 @@ const Cashbook = () => {
                 Expense Total:
               </span>
               <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">
-                {dateFrom || dateTo ? formatCurrency(quickFilterExpenseTotal) : "--"}
+                {dateFrom || dateTo
+                  ? formatCurrency(quickFilterExpenseTotal)
+                  : "--"}
               </span>
               {(dateFrom || dateTo || transactionTypeFilter !== "all") && (
                 <button
@@ -780,11 +805,13 @@ const Cashbook = () => {
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                               t.type === "income" ||
-                              (t.type === "withdrawal" && t.method === "bank") ||
+                              (t.type === "withdrawal" &&
+                                t.method === "bank") ||
                               (t.type === "withdrawal" && t.method === "cash")
                                 ? "bg-green-100 text-green-800"
                                 : t.type === "expense" ||
-                                  (t.type === "deposit" && t.method === "cash") ||
+                                  (t.type === "deposit" &&
+                                    t.method === "cash") ||
                                   (t.type === "deposit" && t.method === "bank")
                                 ? "bg-red-100 text-red-800"
                                 : "bg-purple-100 text-purple-800"
@@ -831,9 +858,11 @@ const Cashbook = () => {
                 <div className="px-6 py-4 bg-white border-t border-gray-200 flex items-center justify-between">
                   <div className="text-sm text-gray-500">
                     Showing{" "}
-                    {filteredTransactions.length === 0 ? 0 : indexOfFirstRow + 1} to{" "}
-                    {Math.min(indexOfLastRow, filteredTransactions.length)} of{" "}
-                    {filteredTransactions.length} transactions
+                    {filteredTransactions.length === 0
+                      ? 0
+                      : indexOfFirstRow + 1}{" "}
+                    to {Math.min(indexOfLastRow, filteredTransactions.length)}{" "}
+                    of {filteredTransactions.length} transactions
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
