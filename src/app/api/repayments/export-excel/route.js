@@ -87,7 +87,7 @@ async function generateExcelReport(filters) {
         lb.Installment as installment,
         latest.paymentCount as latest_payment_count,
         CASE 
-          WHEN (? IS NULL OR ? IS NULL OR lb.activate_date BETWEEN ? AND ?) THEN lb.serviceCharge 
+          WHEN (? IS NOT NULL AND ? IS NOT NULL AND lb.activate_date BETWEEN ? AND ?) THEN lb.serviceCharge 
           ELSE 0 
         END as filtered_service_charge
       FROM loan_bussiness lb
