@@ -69,9 +69,9 @@ async function generateExcelReport(filters) {
         lb.*, 
         c.fullname as fullname,
         lb.group_name,
-        r.paid_amount,
-        r.TotInterest as interest_paid,
-        (r.paid_amount + r.TotInterest) as total_paid,
+        COALESCE(r.paid_amount, 0) as paid_amount,
+        COALESCE(r.TotInterest, 0) as interest_paid,
+        COALESCE(r.paid_amount, 0) + COALESCE(r.TotInterest, 0) as total_paid,
         latest.balance,
         CASE 
           WHEN latest.balance < 0 THEN ABS(latest.balance)
@@ -85,7 +85,11 @@ async function generateExcelReport(filters) {
         lb.activate_date as activete_date,
         COUNT(rp.id) as payment_count,
         lb.Installment as installment,
-        latest.paymentCount as latest_payment_count
+        latest.paymentCount as latest_payment_count,
+        CASE 
+          WHEN (? IS NULL OR ? IS NULL OR lb.activate_date BETWEEN ? AND ?) THEN lb.serviceCharge 
+          ELSE 0 
+        END as filtered_service_charge
       FROM loan_bussiness lb
       LEFT JOIN customer c ON lb.customerid = c.id
       LEFT JOIN (
@@ -94,39 +98,49 @@ async function generateExcelReport(filters) {
           SUM(paid_amount) as paid_amount,
           SUM(TotInterest) as TotInterest
         FROM repayment
+        WHERE (? IS NULL OR ? IS NULL OR payment_date BETWEEN ? AND ?)
         GROUP BY loan_bussiness_id
       ) r ON r.loan_bussiness_id = lb.id
       LEFT JOIN repayment rp ON rp.loan_bussiness_id = lb.id
+        AND (? IS NULL OR ? IS NULL OR rp.payment_date BETWEEN ? AND ?)
       LEFT JOIN (
         SELECT r1.*
         FROM repayment r1
         INNER JOIN (
           SELECT loan_bussiness_id, MAX(paymentCount) as max_payment
           FROM repayment
+          WHERE (? IS NULL OR ? IS NULL OR payment_date BETWEEN ? AND ?)
           GROUP BY loan_bussiness_id
         ) r2 ON r1.loan_bussiness_id = r2.loan_bussiness_id AND r1.paymentCount = r2.max_payment
       ) latest ON latest.loan_bussiness_id = lb.id
       WHERE 1=1
+        AND (? IS NULL OR ? IS NULL OR lb.last_payment BETWEEN ? AND ?)
     `;
 
     const queryParams = [];
 
+    // Add date range parameters for all the subqueries and main WHERE clause
     if (filters.dateFrom && filters.dateTo) {
-      query += ` AND DATE(lb.last_payment) BETWEEN ? AND ?`;
-      queryParams.push(filters.dateFrom, filters.dateTo);
-    }
-    if (filters.dateFrom && !filters.dateTo) {
-      query += ` AND DATE(lb.activate_date) >= ?`;
-      queryParams.push(filters.dateFrom);
-    }
-    if (filters.dateFrom && !filters.dateTo) {
-      query += `AND lb.activate_date BETWEEN ? AND ?`;
-      queryParams.push(
-        `${filters.dateFrom} 00:00:00`,
-        `${filters.dateTo} 23:59:59`
-      );
+      const dateFrom = `${filters.dateFrom} 00:00:00`;
+      const dateTo = `${filters.dateTo} 23:59:59`;
+      // filtered_service_charge CASE on lb.activate_date
+      queryParams.push(dateFrom, dateTo, dateFrom, dateTo);
+      // r subquery
+      queryParams.push(dateFrom, dateTo, dateFrom, dateTo);
+      // rp join
+      queryParams.push(dateFrom, dateTo, dateFrom, dateTo);
+      // latest subquery (inner)
+      queryParams.push(dateFrom, dateTo, dateFrom, dateTo);
+      // main WHERE (lb.last_payment)
+      queryParams.push(dateFrom, dateTo, dateFrom, dateTo);
+    } else {
+      // Push NULLs to satisfy placeholders (5 sets x 4 params)
+      for (let i = 0; i < 5; i++) {
+        queryParams.push(null, null, null, null);
+      }
     }
 
+    // Additional filters
     if (filters.status && filters.status !== "all") {
       query += ` AND lb.status = ?`;
       queryParams.push(filters.status);
@@ -194,9 +208,9 @@ async function generateExcelReport(filters) {
       console.log("Raw last_payment:", row.last_payment);
       // 1. issueddate = lb.activate_date
       const issuedDateValue = row.activate_date
-        ? new Date(row.addat).toISOString().split("T")[0]
+        ? new Date(row.activate_date).toISOString().split("T")[0]
         : "";
-      console.log("Raw addat:", row.addat);
+      console.log("Raw activate_date:", row.activate_date);
       // 2. center = lb.location
       const centerValue = row.gs || "";
 
@@ -220,8 +234,8 @@ async function generateExcelReport(filters) {
         installmentVal = parseFloat(row.Totalpay) / termNumber;
       }
 
-      // 7. serviceCharge = lb.serviceCharge
-      const serviceChargeVal = row.serviceCharge || 0;
+  // 7. serviceCharge = filtered_service_charge (only if paid within selected date range)
+  const serviceChargeVal = row.filtered_service_charge || 0;
 
       // 8. totalOutstanding = like printPreview.jsx "Outstanding"
       //   (example) = row.Totalpay - row.paid_amount
