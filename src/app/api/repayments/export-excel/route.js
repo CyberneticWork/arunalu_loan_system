@@ -234,8 +234,8 @@ async function generateExcelReport(filters) {
         installmentVal = parseFloat(row.Totalpay) / termNumber;
       }
 
-  // 7. serviceCharge = filtered_service_charge (only if paid within selected date range)
-  const serviceChargeVal = row.filtered_service_charge || 0;
+      // 7. serviceCharge = filtered_service_charge (only if paid within selected date range)
+      const serviceChargeVal = row.filtered_service_charge || 0;
 
       // 8. totalOutstanding = like printPreview.jsx "Outstanding"
       //   (example) = row.Totalpay - row.paid_amount
