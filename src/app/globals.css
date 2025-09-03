@@ -54,8 +54,6 @@
   --card-foreground: oklch(0.3 0.01 255);
   --popover: oklch(1 0 0);
   /* Changed popover-foreground to match foreground */
-  --popover-foreground: oklch(0.3 0.01 255);
-  /* Changed primary to #1a73e8 equivalent in OKLCH */
   --primary: oklch(0.57 0.19 255);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
@@ -283,4 +281,44 @@ input[type="checkbox"] {
   height: 16px !important;
   padding: 0 !important;
   border-radius: 3px !important;
+}
+
+/* Add these animations for the Holiday component */
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideIn {
+  0% { transform: translateX(20px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* Animation utility classes */
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Add scale transition */
+.transition-transform {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+.hover\:scale-105:hover {
+  transform: scale(1.05);
 }

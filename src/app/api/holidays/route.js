@@ -1,36 +1,98 @@
+import { connectDB } from "@/lib/db";
 import { NextResponse } from "next/server";
 
-// GET /api/holidays - Get all holidays
-export async function GET() {
+// GET: Fetch holidays (default to active only, but allow filtering)
+export async function GET(request) {
+  const url = new URL(request.url);
+  const status = url.searchParams.get("status") || "active"; // Default to active
   try {
-    // TODO: Implement holidays retrieval logic
-    return NextResponse.json({
-      success: true,
-      message: "Holidays API endpoint - Coming soon",
-      data: [],
+    const connection = await connectDB();
+    let query;
+    let params = [];
+
+    if (status === "all") {
+      // Fetch all holidays without status filter
+      query = "SELECT * FROM holidays ORDER BY date ASC";
+    } else {
+      // Fetch holidays by specific status
+      query = "SELECT * FROM holidays WHERE status = ? ORDER BY date ASC";
+      params = [status];
+    }
+
+    const [rows] = await connection.execute(query, params);
+    await connection.end();
+    return new Response(JSON.stringify({ success: true, data: rows }), {
+      status: 200,
     });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
       { status: 500 }
     );
   }
 }
 
-// POST /api/holidays - Create a new holiday
-export async function POST(request) {
+// POST: Create a new holiday (default to active)
+export async function POST(req) {
   try {
-    // TODO: Implement holiday creation logic
-    const body = await request.json();
-
-    return NextResponse.json({
-      success: true,
-      message: "Holiday created - Coming soon",
-      data: body,
-    });
+    const { date, name, type, description, status } = await req.json();
+    const connection = await connectDB();
+    const [result] = await connection.execute(
+      "INSERT INTO holidays (date, name, type, description, status) VALUES (?, ?, ?, ?, ?)",
+      [date, name, type || "public", description || "", status || "active"]
+    );
+    await connection.end();
+    return new Response(
+      JSON.stringify({ success: true, id: result.insertId }),
+      { status: 201 }
+    );
   } catch (error) {
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500 }
+    );
+  }
+}
+
+// PUT: Update an existing holiday (e.g., change status)
+export async function PUT(req) {
+  try {
+    const { id, date, name, type, description, status } = await req.json();
+    const connection = await connectDB();
+    const [result] = await connection.execute(
+      "UPDATE holidays SET date = ?, name = ?, type = ?, description = ?, status = ? WHERE id = ?",
+      [date, name, type, description, status, id]
+    );
+    await connection.end();
+    return new Response(
+      JSON.stringify({ success: true, affectedRows: result.affectedRows }),
+      { status: 200 }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE: Soft delete by setting status to inactive (or hard delete if preferred)
+export async function DELETE(req) {
+  try {
+    const { id } = await req.json();
+    const connection = await connectDB();
+    const [result] = await connection.execute(
+      "UPDATE holidays SET status = 'inactive' WHERE id = ?",
+      [id]
+    );
+    await connection.end();
+    return new Response(
+      JSON.stringify({ success: true, affectedRows: result.affectedRows }),
+      { status: 200 }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
       { status: 500 }
     );
   }
