@@ -132,5 +132,23 @@
         "icon": "UserCog"
       }
     ]
+  },
+  {
+    "id": 20,
+    "name": "Holidays",
+    "route": "/holidays",
+    "icon": "ShieldUser"
+  },
+  {
+    "id": 21,
+    "name": "Fine interest",
+    "route": "/fine-interest",
+    "icon": "Sliders"
+  },
+  {
+    "id": 22,
+    "name": "Blacklist",
+    "route": "/blacklist-customers",
+    "icon": "ShieldUser"
   }
 ]
