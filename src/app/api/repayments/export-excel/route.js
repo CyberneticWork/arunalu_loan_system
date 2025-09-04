@@ -162,6 +162,14 @@ async function generateExcelReport(filters) {
     // Execute query
     const [rows] = await connection.query(query, queryParams);
 
+    // Fetch active holidays once and build YYYY-MM-DD strings array
+    const [holidayRows] = await connection.execute(
+      "SELECT date FROM holidays WHERE status = 'active'"
+    );
+    const holidayDates = holidayRows.map(
+      (h) => new Date(h.date).toISOString().split("T")[0]
+    );
+
     // Create workbook and sheet
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Repayments Report");
@@ -271,60 +279,13 @@ async function generateExcelReport(filters) {
       // 16. loanTerm = lb.term
       const termVal = row.term || "";
 
-      // 17. dueDate = days between last payment and today
-      let dueDateVal = "";
-
-      if (row.last_payment) {
-        // Calculate due date based on last_payment column
-        const lastPaymentDate = new Date(row.last_payment);
-        const today = new Date();
-
-        // Calculate days difference based on loan type
-        if (row.type && row.type.toLowerCase() === "daily") {
-          const daysDiff = Math.floor(
-            (today - lastPaymentDate) / (1000 * 60 * 60 * 24)
-          );
-          dueDateVal = daysDiff > 0 ? daysDiff.toString() : "";
-        } else if (row.type && row.type.toLowerCase() === "weekly") {
-          const daysDiff = Math.floor(
-            (today - lastPaymentDate) / (1000 * 60 * 60 * 24)
-          );
-          const weeksDiff = Math.floor(daysDiff / 7);
-          dueDateVal = weeksDiff > 0 ? weeksDiff.toString() : "";
-        } else {
-          // Monthly
-          const months =
-            (today.getFullYear() - lastPaymentDate.getFullYear()) * 12 +
-            (today.getMonth() - lastPaymentDate.getMonth());
-          dueDateVal = months > 0 ? months.toString() : "";
-        }
-      } else if (row.activate_date) {
-        // If no last_payment recorded, use activate_date
-        const activateDate = new Date(row.activate_date);
-        const today = new Date();
-
-        // Calculate based on loan type
-        if (row.type && row.type.toLowerCase() === "daily") {
-          const daysSinceActivation = Math.floor(
-            (today - activateDate) / (1000 * 60 * 60 * 24)
-          );
-          dueDateVal =
-            daysSinceActivation > 0 ? daysSinceActivation.toString() : "";
-        } else if (row.type && row.type.toLowerCase() === "weekly") {
-          const daysSinceActivation = Math.floor(
-            (today - activateDate) / (1000 * 60 * 60 * 24)
-          );
-          const weeksSinceActivation = Math.floor(daysSinceActivation / 7);
-          dueDateVal =
-            weeksSinceActivation > 0 ? weeksSinceActivation.toString() : "";
-        } else {
-          // Monthly
-          const months =
-            (today.getFullYear() - activateDate.getFullYear()) * 12 +
-            (today.getMonth() - activateDate.getMonth());
-          dueDateVal = months > 0 ? months.toString() : "";
-        }
-      }
+      // 17. dueDate = same holiday-aware logic used in /api/repayments
+      const dueDateVal = calculateDueDaysLocal(
+        row.last_payment,
+        row.activate_date,
+        row.type,
+        holidayDates
+      );
 
       return {
         date: dateValue,
@@ -392,52 +353,92 @@ async function generateExcelReport(filters) {
   }
 }
 
-// Function to calculate due date as number of overdue days
-function calculateDueDate(activateDate, term, type, paymentCount, status) {
-  if (!activateDate || !term || !type || status !== "active") {
-    return "";
-  }
+// Holiday-aware due days calculator (mirrors /api/repayments)
+function calculateDueDaysLocal(lastPayment, activateDate, type, holidayDates) {
+  const today = new Date();
+  const todayLocal = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+  let dueDateVal = "";
 
-  // Parse term to get the number
-  const termNumber = parseInt(term.match(/\d+/)[0] || 0);
+  const isHoliday = (d) => holidayDates.includes(d.toISOString().split("T")[0]);
 
-  // If all payments are done, return empty string (no due date)
-  if (paymentCount >= termNumber) {
-    return "";
-  }
-
-  const startDate = new Date(activateDate);
-  const currentDate = new Date();
-
-  // Calculate expected payments based on time passed
-  let expectedPayments = 0;
-
-  if (type && type.toLowerCase() === "daily") {
-    // For daily loans, calculate days since start
-    const daysSinceStart = Math.floor(
-      (currentDate - startDate) / (24 * 60 * 60 * 1000)
+  if (lastPayment) {
+    const lastPaymentDate = new Date(lastPayment);
+    const lastPaymentLocal = new Date(
+      lastPaymentDate.getFullYear(),
+      lastPaymentDate.getMonth(),
+      lastPaymentDate.getDate()
     );
-    expectedPayments = Math.min(daysSinceStart, termNumber);
-  } else if (type && type.toLowerCase() === "weekly") {
-    // For weekly loans, calculate weeks since start
-    const weeksSinceStart = Math.floor(
-      (currentDate - startDate) / (7 * 24 * 60 * 60 * 1000)
+
+    if (type && type.toLowerCase() === "daily") {
+      let businessDays = 0;
+      let currentDate = new Date(lastPaymentLocal);
+      while (currentDate < todayLocal) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        const dow = currentDate.getDay();
+        const weekend = dow === 0 || dow === 6;
+        if (!weekend && !isHoliday(currentDate)) businessDays++;
+      }
+      dueDateVal = businessDays > 0 ? businessDays.toString() : "";
+    } else if (type && type.toLowerCase() === "weekly") {
+      let businessWeeks = 0;
+      let currentDate = new Date(lastPaymentLocal);
+      while (currentDate < todayLocal) {
+        currentDate.setDate(currentDate.getDate() + 7);
+        const paymentDueDate = new Date(currentDate);
+        paymentDueDate.setDate(paymentDueDate.getDate() - 7);
+        const dow = paymentDueDate.getDay();
+        const weekend = dow === 0 || dow === 6;
+        if (!weekend && !isHoliday(paymentDueDate)) businessWeeks++;
+      }
+      dueDateVal = businessWeeks > 0 ? businessWeeks.toString() : "";
+    } else {
+      const months =
+        (todayLocal.getFullYear() - lastPaymentLocal.getFullYear()) * 12 +
+        (todayLocal.getMonth() - lastPaymentLocal.getMonth());
+      dueDateVal = months > 0 ? months.toString() : "";
+    }
+  } else if (activateDate) {
+    const activate = new Date(activateDate);
+    const activateLocal = new Date(
+      activate.getFullYear(),
+      activate.getMonth(),
+      activate.getDate()
     );
-    expectedPayments = Math.min(weeksSinceStart, termNumber);
-  } else {
-    // For monthly loans (default), calculate months since start
-    const monthsSinceStart =
-      (currentDate.getFullYear() - startDate.getFullYear()) * 12 +
-      currentDate.getMonth() -
-      startDate.getMonth();
-    expectedPayments = Math.min(monthsSinceStart, termNumber);
+
+    if (type && type.toLowerCase() === "daily") {
+      let businessDays = 0;
+      let currentDate = new Date(activateLocal);
+      while (currentDate < todayLocal) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        const dow = currentDate.getDay();
+        const weekend = dow === 0 || dow === 6;
+        if (!weekend && !isHoliday(currentDate)) businessDays++;
+      }
+      dueDateVal = businessDays > 0 ? businessDays.toString() : "";
+    } else if (type && type.toLowerCase() === "weekly") {
+      let businessWeeks = 0;
+      let currentDate = new Date(activateLocal);
+      while (currentDate < todayLocal) {
+        currentDate.setDate(currentDate.getDate() + 7);
+        const paymentDueDate = new Date(currentDate);
+        paymentDueDate.setDate(paymentDueDate.getDate() - 7);
+        const dow = paymentDueDate.getDay();
+        const weekend = dow === 0 || dow === 6;
+        if (!weekend && !isHoliday(paymentDueDate)) businessWeeks++;
+      }
+      dueDateVal = businessWeeks > 0 ? businessWeeks.toString() : "";
+    } else {
+      const months =
+        (todayLocal.getFullYear() - activateLocal.getFullYear()) * 12 +
+        (todayLocal.getMonth() - activateLocal.getMonth());
+      dueDateVal = months > 0 ? months.toString() : "";
+    }
   }
-
-  // Calculate overdue payments (expected minus actual)
-  const overduePayments = Math.max(0, expectedPayments - paymentCount);
-
-  // Return the number of overdue payments
-  return overduePayments > 0 ? overduePayments.toString() : "";
+  return dueDateVal;
 }
 
 export async function POST(request) {
