@@ -4,18 +4,41 @@ import { NextResponse } from "next/server";
 // GET: Fetch holidays (default to active only, but allow filtering)
 export async function GET(request) {
   const url = new URL(request.url);
-  const status = url.searchParams.get("status") || "active"; // Default to active
+  const status = url.searchParams.get("status") || "active";
   try {
     const connection = await connectDB();
     let query;
     let params = [];
 
     if (status === "all") {
-      // Fetch all holidays without status filter
-      query = "SELECT * FROM holidays ORDER BY date ASC";
+      query = `
+        SELECT 
+          id,
+          DATE_FORMAT(date, '%Y-%m-%d') AS date,
+          name,
+          type,
+          description,
+          created_at,
+          updated_at,
+          status
+        FROM holidays
+        ORDER BY date ASC
+      `;
     } else {
-      // Fetch holidays by specific status
-      query = "SELECT * FROM holidays WHERE status = ? ORDER BY date ASC";
+      query = `
+        SELECT 
+          id,
+          DATE_FORMAT(date, '%Y-%m-%d') AS date,
+          name,
+          type,
+          description,
+          created_at,
+          updated_at,
+          status
+        FROM holidays
+        WHERE status = ?
+        ORDER BY date ASC
+      `;
       params = [status];
     }
 

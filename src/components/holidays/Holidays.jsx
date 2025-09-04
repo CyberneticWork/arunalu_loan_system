@@ -58,7 +58,7 @@ import {
   XCircle,
   Loader2,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parse } from "date-fns";
 
 export default function Holidays() {
   const [holidays, setHolidays] = useState([]);
@@ -219,14 +219,16 @@ export default function Holidays() {
   const openEditModal = (holiday) => {
     setEditingHoliday(holiday);
 
-    // Format date for HTML date input (YYYY-MM-DD format)
     const formatDateForInput = (dateString) => {
       try {
         if (!dateString) return "";
-        const date = parseISO(dateString);
-        return format(date, "yyyy-MM-dd");
-      } catch (error) {
-        return dateString;
+        const normalized = String(dateString).slice(0, 10); // YYYY-MM-DD
+        // Already normalized? just return it
+        if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return normalized;
+        const d = parse(normalized, "yyyy-MM-dd", new Date());
+        return format(d, "yyyy-MM-dd");
+      } catch {
+        return String(dateString).slice(0, 10);
       }
     };
 
@@ -240,14 +242,15 @@ export default function Holidays() {
     setIsEditModalOpen(true);
   };
 
-  // Format date for display
+  // Format date for display (no timezone shifts)
   const formatDate = (dateString) => {
     try {
       if (!dateString) return "";
-      const date = parseISO(dateString);
-      return format(date, "MMMM d, yyyy");
-    } catch (error) {
-      return dateString;
+      const normalized = String(dateString).slice(0, 10); // YYYY-MM-DD
+      const d = parse(normalized, "yyyy-MM-dd", new Date());
+      return format(d, "MMMM d, yyyy");
+    } catch {
+      return String(dateString).slice(0, 10);
     }
   };
 
