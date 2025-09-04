@@ -136,19 +136,16 @@
   {
     "id": 20,
     "name": "Holidays",
-    "route": "/holidays",
-    "icon": "ShieldUser"
+    "route": "/holidays"
   },
   {
     "id": 21,
     "name": "Fine interest",
-    "route": "/fine-interest",
-    "icon": "Sliders"
+    "route": "/fine-interest"
   },
   {
     "id": 22,
     "name": "Blacklist",
-    "route": "/blacklist-customers",
-    "icon": "ShieldUser"
+    "route": "/blacklist-customers"
   }
 ]

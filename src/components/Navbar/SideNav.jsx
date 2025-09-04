@@ -488,14 +488,14 @@ export default function Sidebar() {
             {/* Render ACL routes dynamically */}
             {filteredACL.map((item) => {
               const route = item.route;
-              const Icon = icons[item.icon];
+              const Icon = item.icon ? icons[item.icon] : null; // Safely handle missing icons
               const isParentActive = activeNav === route;
               const hasActiveSubmenuChild = hasActiveChild(item);
 
               return (
                 <div key={route} className="mb-2">
                   <NavItem
-                    icon={<Icon className="w-5 h-5" />}
+                    icon={Icon ? <Icon className="w-5 h-5" /> : null} // Only pass icon if it exists
                     label={item.name}
                     isActive={isParentActive || hasActiveSubmenuChild}
                     onClick={() => {
@@ -525,7 +525,7 @@ export default function Sidebar() {
                     !collapsed && (
                       <div className="ml-6 pl-5 mt-1 mb-3 border-l-2 border-slate-700 flex flex-col gap-1">
                         {item.submenu.map((subitem) => {
-                          const Icon = icons[subitem.icon];
+                          const SubIcon = subitem.icon ? icons[subitem.icon] : null; // Safely handle missing icons in submenu
                           const isSubItemActive = isSubmenuItemActive(
                             subitem.route
                           );
@@ -533,7 +533,7 @@ export default function Sidebar() {
                           return (
                             <NavItem
                               key={subitem.route}
-                              icon={<Icon className="w-4 h-4" />}
+                              icon={SubIcon ? <SubIcon className="w-4 h-4" /> : null} // Only pass icon if it exists
                               label={subitem.name}
                               isActive={isSubItemActive}
                               onClick={() => handleNavigation(subitem.route)}
