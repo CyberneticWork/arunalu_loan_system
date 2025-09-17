@@ -12,6 +12,7 @@ export function LoanSubmissionDisplay({
   // const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState("");
+  const [notificationType, setNotificationType] = useState(null); // 'success' | 'error'
   const router = useRouter();
 
   const [loanTypeMode, setLoanTypeMode] = useState("normal");
@@ -66,6 +67,7 @@ export function LoanSubmissionDisplay({
     // Add group name validation
     if (loanTypeMode === "group" && !groupName.trim()) {
       setNotification("Please enter a group name for group loans");
+      setNotificationType("error");
       setLoading(false);
       return;
     }
@@ -78,6 +80,7 @@ export function LoanSubmissionDisplay({
       setNotification(
         "Please select a valid Account Manager before submitting."
       );
+      setNotificationType("error");
       setLoading(false);
       return;
     }
@@ -132,12 +135,21 @@ export function LoanSubmissionDisplay({
 
       if (apiData.code === "SUCCESS") {
         setNotification("Loan submitted successfully!");
+        setNotificationType("success");
         setTimeout(() => {
           //   // router.push("/your-loan-details-page"); // add redirect path
           router.push("/loans/0"); // Redirect to loan types page for now
         }, 2000);
       } else {
-        setNotification("Failed to submit loan. Please try again.");
+        // Show specific message for blacklisted customer (403)
+        if (apiRes.status === 403 && apiData?.message) {
+          setNotification(apiData.message);
+        } else if (apiData?.message) {
+          setNotification(apiData.message);
+        } else {
+          setNotification("Failed to submit loan. Please try again.");
+        }
+        setNotificationType("error");
       }
 
       // setResult(dataToSend);
@@ -147,6 +159,7 @@ export function LoanSubmissionDisplay({
       setNotification(
         "An error occurred. Please try again. " + (e.message || "")
       );
+      setNotificationType("error");
     }
     setLoading(false);
   };
@@ -397,7 +410,13 @@ export function LoanSubmissionDisplay({
       </div>
 
       {notification && (
-        <div className="mb-4 p-3 rounded bg-green-100 text-green-800 font-semibold text-center">
+        <div
+          className={`mb-4 p-3 rounded font-semibold text-center ${
+            notificationType === "error"
+              ? "bg-red-100 text-red-800"
+              : "bg-green-100 text-green-800"
+          }`}
+        >
           {notification}
         </div>
       )}
