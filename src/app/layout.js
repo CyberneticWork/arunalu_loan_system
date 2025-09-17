@@ -1,5 +1,6 @@
 import "./globals.css";
 import ChildRender from "@/components/main/ChildHandling";
+import { Toaster } from "sonner";
 
 export const metadata = {
   title: "Arunalu Lanka | Loan Management System",
@@ -19,6 +20,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className="antialiased font-sf">
         <ChildRender>{children}</ChildRender>
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );

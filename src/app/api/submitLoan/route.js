@@ -12,6 +12,31 @@ export async function POST(req) {
     const { loanData, client, CROid, guarantors } = data;
 
     connection = await connectDB();
+
+    // Check if customer is blacklisted
+    const [customerRows] = await connection.execute(
+      "SELECT id, fullname, nic, isBlacklisted FROM customer WHERE id = ?",
+      [client.id]
+    );
+
+    if (customerRows.length === 0) {
+      return Response.json(
+        { code: "ERROR", message: "Customer not found" },
+        { status: 404 }
+      );
+    }
+
+    const customer = customerRows[0];
+    if (customer.isBlacklisted) {
+      return Response.json(
+        {
+          code: "ERROR",
+          message: `Cannot create loan for blacklisted customer: ${customer.fullname} (NIC: ${customer.nic})`,
+        },
+        { status: 403 }
+      );
+    }
+
     await connection.beginTransaction();
 
     // 1. Insert loan_bussiness
@@ -44,7 +69,10 @@ export async function POST(req) {
       loanData.billtype,
       "pending",
       loanData.submittedAt
-        ? new Date(loanData.submittedAt).toISOString().slice(0, 19).replace("T", " ")
+        ? new Date(loanData.submittedAt)
+            .toISOString()
+            .slice(0, 19)
+            .replace("T", " ")
         : null,
     ].map(safeParam);
 
