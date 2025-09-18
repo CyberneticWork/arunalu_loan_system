@@ -69,6 +69,7 @@ export default function FineInterest() {
   const [finesTotal, setFinesTotal] = useState(0);
   const [duePage, setDuePage] = useState(1);
   const [dueTotal, setDueTotal] = useState(0);
+  const [dueNic, setDueNic] = useState("");
   const pageSize = 15;
 
   const fetchFines = async (page = finesPage) => {
@@ -159,11 +160,12 @@ export default function FineInterest() {
     }
   };
 
-  const fetchDueLoans = async (page = duePage) => {
+  const fetchDueLoans = async (page = duePage, nic = dueNic) => {
     try {
       setLoadingDue(true);
+      const nicParam = nic ? `&nic=${encodeURIComponent(nic)}` : "";
       const res = await fetch(
-        `/api/fine-interest?action=due&page=${page}&limit=${pageSize}`
+        `/api/fine-interest?action=due&page=${page}&limit=${pageSize}${nicParam}`
       );
       const json = await res.json();
       if (json.success) {
@@ -482,6 +484,38 @@ export default function FineInterest() {
           )}
           {tab === "due" && (
             <div>
+              <div className="flex items-center gap-3 mb-3">
+                <Input
+                  placeholder="Search NIC"
+                  value={dueNic}
+                  onChange={(e) => setDueNic(e.target.value)}
+                  className="w-48"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setDuePage(1);
+                    fetchDueLoans(1, dueNic);
+                  }}
+                  disabled={loadingDue}
+                >
+                  Search
+                </Button>
+                {dueNic && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setDueNic("");
+                      setDuePage(1);
+                      fetchDueLoans(1, "");
+                    }}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
               {dueLoans.length === 0 ? (
                 <div className="text-center text-sm text-gray-500 py-8">
                   {loadingDue ? "Loading..." : "No due loans found"}
@@ -496,7 +530,8 @@ export default function FineInterest() {
                         <TableHead>NIC</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Due Days</TableHead>
-                        <TableHead>Balance</TableHead>
+                        <TableHead>Arrears</TableHead>
+                        <TableHead>Overpay</TableHead>
                         <TableHead>Last Fine Amt</TableHead>
                         <TableHead>Last Fine Date</TableHead>
                         <TableHead>Fine Amount</TableHead>
@@ -519,7 +554,16 @@ export default function FineInterest() {
                               {l.dueDays}
                             </Badge>
                           </TableCell>
-                          <TableCell>{l.balance}</TableCell>
+                          <TableCell>
+                            {l.arrears
+                              ? `LKR ${Number(l.arrears).toFixed(2)}`
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {l.overpayment
+                              ? `LKR ${Number(l.overpayment).toFixed(2)}`
+                              : "-"}
+                          </TableCell>
                           <TableCell>
                             {l.lastFineAmount != null
                               ? Number(l.lastFineAmount).toFixed(2)

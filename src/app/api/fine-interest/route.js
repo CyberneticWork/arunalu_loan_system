@@ -93,6 +93,7 @@ function formatDate(d) {
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const action = searchParams.get("action") || "list";
+  const nicFilter = (searchParams.get("nic") || "").trim();
   const page = parseInt(searchParams.get("page") || "1", 10);
   const limit = Math.min(parseInt(searchParams.get("limit") || "15", 10), 100);
   const offset = (page - 1) * limit;
@@ -144,6 +145,12 @@ export async function GET(req) {
 
       const enriched = [];
       for (const loan of loanRows) {
+        if (
+          nicFilter &&
+          loan.nic &&
+          loan.nic.toLowerCase() !== nicFilter.toLowerCase()
+        )
+          continue;
         const dueDays = await calculateDueDaysWithConnection(
           {
             last_payment: loan.last_payment,
@@ -172,11 +179,16 @@ export async function GET(req) {
           lastFineAmount = Number(lastPaid[0].fine_amount);
           lastFineDate = lastPaid[0].paid_at;
         }
+        const balNum = Number(loan.balance || 0);
+        const arrears = balNum < 0 ? Math.abs(balNum) : 0;
+        const overpayment = balNum > 0 ? balNum : 0;
         enriched.push({
           ...loan,
           dueDays: Number(dueDays),
           lastFineAmount,
           lastFineDate,
+          arrears,
+          overpayment,
         });
       }
       // Sort by highest dueDays first
