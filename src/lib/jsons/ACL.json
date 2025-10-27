@@ -148,4 +148,11 @@
     "name": "Blacklist",
     "route": "/blacklist-customers"
   }
+  ,
+  {
+    "id": 24,
+    "name": "Send SMS",
+    "route": "/send-sms",
+    "icon": "SendHorizontal"
+  }
 ]

@@ -34,3 +34,22 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Send SMS feature
+
+This project includes a Send SMS page at `/send-sms` that lists today's repayments and lets you send confirmations individually or in bulk.
+
+Configure an SMS provider via environment variables (add to your `.env`):
+
+```
+# SMS provider (mock | twilio)
+SMS_PROVIDER=mock
+
+# Twilio (if using SMS_PROVIDER=twilio)
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_FROM_NUMBER=
+```
+
+When `SMS_PROVIDER=mock` or when values are missing, messages run in dry-run mode and are logged server-side without sending.
+
