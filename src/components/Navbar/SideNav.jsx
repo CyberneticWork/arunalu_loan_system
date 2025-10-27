@@ -26,6 +26,10 @@ import {
   Wallet,
   FileSpreadsheet,
   Sliders,
+  CalendarDays,
+  BadgePercent,
+  UserX,
+  MessageSquare,
 } from "lucide-react";
 
 const icons = {
@@ -47,6 +51,10 @@ const icons = {
   Wallet,
   FileSpreadsheet,
   Sliders,
+  CalendarDays,
+  BadgePercent,
+  UserX,
+  MessageSquare,
 };
 
 import { Button } from "@/components/ui/button";

@@ -8,14 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { SendHorizontal, CheckCircle2, XCircle, Filter } from "lucide-react";
+import { SendHorizontal, CheckCircle2, XCircle } from "lucide-react";
 
 export default function SendSMSPage() {
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [query, setQuery] = useState("");
-  const [onlyCorrect, setOnlyCorrect] = useState(true);
   const [template, setTemplate] = useState(
     "Dear {name}, we received your payment of LKR {amount} for loan #{loanId} on {date}. Thank you."
   );
@@ -44,7 +43,6 @@ export default function SendSMSPage() {
 
   const filtered = useMemo(() => {
     let data = rows;
-    if (onlyCorrect) data = data.filter((r) => r.isCorrect);
     if (query.trim()) {
       const q = query.toLowerCase();
       data = data.filter((r) =>
@@ -54,7 +52,7 @@ export default function SendSMSPage() {
       );
     }
     return data;
-  }, [rows, onlyCorrect, query]);
+  }, [rows, query]);
 
   const allVisibleIds = filtered.map((r) => r.repaymentId);
   const allVisibleSelected = allVisibleIds.every((id) => selected.has(id)) && allVisibleIds.length > 0;
@@ -142,10 +140,6 @@ export default function SendSMSPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <div className="lg:col-span-2 flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Checkbox id="onlyCorrect" checked={onlyCorrect} onCheckedChange={(v) => setOnlyCorrect(Boolean(v))} />
-            <label htmlFor="onlyCorrect" className="text-sm">Only show correct amount</label>
-          </div>
           <div className="flex-1 min-w-52">
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, phone, loan id" />
           </div>

@@ -136,23 +136,26 @@
   {
     "id": 20,
     "name": "Holidays",
-    "route": "/holidays"
+    "route": "/holidays",
+    "icon": "CalendarDays"
   },
   {
     "id": 21,
     "name": "Fine interest",
-    "route": "/fine-interest"
+    "route": "/fine-interest",
+    "icon": "BadgePercent"
   },
   {
     "id": 22,
     "name": "Blacklist",
-    "route": "/blacklist-customers"
+    "route": "/blacklist-customers",
+    "icon": "UserX"
   }
   ,
   {
     "id": 24,
     "name": "Send SMS",
     "route": "/send-sms",
-    "icon": "SendHorizontal"
+    "icon": "MessageSquare"
   }
 ]
