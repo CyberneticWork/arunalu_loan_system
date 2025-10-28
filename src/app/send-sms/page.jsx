@@ -217,8 +217,20 @@ export default function SendSMSPage() {
 function normalizePhone(phone) {
   if (!phone) return "";
   const p = String(phone).replace(/[^0-9+]/g, "");
-  // If number starts with 0, you might want to convert to +94 (Sri Lanka) or keep as is based on your needs.
-  // Here we keep it simple and return as-is if it already has a +
+  
+  // Already has country code
   if (p.startsWith("+")) return p;
-  return p; // Adjust to your country code logic if needed
+  
+  // Convert local Sri Lankan format to international
+  if (p.startsWith("0")) {
+    return "+94" + p.substring(1); // Remove 0 and add +94
+  }
+  
+  // Number without prefix, assume Sri Lankan
+  if (p.length >= 9) {
+    return "+94" + p;
+  }
+  
+  // Invalid/too short, return as-is
+  return p;
 }

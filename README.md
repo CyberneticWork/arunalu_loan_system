@@ -42,13 +42,20 @@ This project includes a Send SMS page at `/send-sms` that lists today's repaymen
 Configure an SMS provider via environment variables (add to your `.env`):
 
 ```
-# SMS provider (mock | twilio)
+# SMS provider (mock | twilio | textlk)
 SMS_PROVIDER=mock
 
 # Twilio (if using SMS_PROVIDER=twilio)
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_FROM_NUMBER=
+
+# text.lk (if using SMS_PROVIDER=textlk)
+# API docs: https://app.text.lk/api/v3/
+TEXTLK_API_TOKEN=
+# Optional overrides
+TEXTLK_API_BASE=https://app.text.lk/api/v3
+TEXTLK_SENDER_ID=
 ```
 
 When `SMS_PROVIDER=mock` or when values are missing, messages run in dry-run mode and are logged server-side without sending.

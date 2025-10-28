@@ -1,6 +1,49 @@
 // POST /api/sms/send
 // Body: { recipients: Array<{ phone: string, message: string, meta?: any }>, dryRun?: boolean }
-// Returns: { results: Array<{ phone, success, provider, error? }>, dryRun }
+// Returns: { results: Array<{ phone, success, provider, error?, response? }>, dryRun }
+
+async function sendViaTextLk(recipient, message) {
+  const token = process.env.TEXTLK_API_TOKEN;
+  const base = (process.env.TEXTLK_API_BASE || "https://app.text.lk/api/v3").replace(/\/$/, "");
+  const senderId = process.env.TEXTLK_SENDER_ID || undefined;
+
+  if (!token) {
+    return { ok: false, error: "TEXTLK_API_TOKEN is not set" };
+  }
+
+  // Primary attempt: OAuth v3 JSON API
+  try {
+    const res = await fetch(`${base}/sms/send`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipient,
+        message,
+        type: "plain",  // Required by text.lk API for text messages
+        ...(senderId ? { sender_id: senderId } : {}),
+      }),
+      // Ensure we don't cache
+      cache: "no-store",
+    });
+
+    let payload = null;
+    try {
+      payload = await res.json();
+    } catch (_) {
+      payload = await res.text();
+    }
+
+    if (res.ok) {
+      return { ok: true, response: payload };
+    }
+    return { ok: false, error: `text.lk v3 error ${res.status}`, response: payload };
+  } catch (e) {
+    return { ok: false, error: e?.message || "Network error (text.lk v3)" };
+  }
+}
 
 export async function POST(request) {
   try {
@@ -15,33 +58,8 @@ export async function POST(request) {
     }
 
     const provider = (process.env.SMS_PROVIDER || "mock").toLowerCase();
-    const isTwilio = provider === "twilio";
+    const isTextLk = provider === "textlk" || provider === "text-lk";
     const dryRun = forceDryRun || provider === "mock";
-
-    let twilioClient = null;
-    if (isTwilio && !dryRun) {
-      const sid = process.env.TWILIO_ACCOUNT_SID;
-      const token = process.env.TWILIO_AUTH_TOKEN;
-      const from = process.env.TWILIO_FROM_NUMBER;
-      if (!sid || !token || !from) {
-        return Response.json(
-          { code: "ERROR", message: "Twilio is not fully configured (missing SID/TOKEN/FROM)" },
-          { status: 500 }
-        );
-      }
-      try {
-        // Lazy-load twilio only when used, to avoid build-time dependency if not configured
-        const twilio = (await import("twilio")).default;
-        twilioClient = twilio(sid, token);
-      } catch (e) {
-        return Response.json(
-          { code: "ERROR", message: "Twilio SDK not installed. Run: npm i twilio" },
-          { status: 500 }
-        );
-      }
-    }
-
-    const fromNumber = process.env.TWILIO_FROM_NUMBER || process.env.SMS_FROM_NUMBER || "";
 
     const results = [];
 
@@ -59,13 +77,12 @@ export async function POST(request) {
         continue;
       }
 
-      if (isTwilio && twilioClient) {
-        try {
-          await twilioClient.messages.create({ to: phone, from: fromNumber, body: message });
-          results.push({ phone, success: true, provider: "twilio" });
-        } catch (e) {
-          console.error("Twilio send error", e);
-          results.push({ phone, success: false, provider: "twilio", error: e?.message || "Unknown error" });
+      if (isTextLk) {
+        const sendRes = await sendViaTextLk(phone, message);
+        if (sendRes.ok) {
+          results.push({ phone, success: true, provider: "textlk", response: sendRes.response });
+        } else {
+          results.push({ phone, success: false, provider: "textlk", error: sendRes.error, response: sendRes.response });
         }
         continue;
       }
