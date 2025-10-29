@@ -145,10 +145,10 @@ export default function SendSMSPage() {
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, phone, loan id" />
           </div>
         </div>
-        <div className="lg:col-span-1">
+        {/* <div className="lg:col-span-1">
           <Textarea value={template} onChange={(e) => setTemplate(e.target.value)} rows={3} />
           <div className="text-xs text-muted-foreground mt-1">Placeholders: {`{name}`} {`{amount}`} {`{loanId}`} {`{date}`} {`{settlement}`}</div>
-        </div>
+        </div> */}
       </div>
 
       <div className="rounded-lg border bg-card">
