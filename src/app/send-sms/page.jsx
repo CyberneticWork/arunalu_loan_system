@@ -16,7 +16,7 @@ export default function SendSMSPage() {
   const [selected, setSelected] = useState(new Set());
   const [query, setQuery] = useState("");
   const [template, setTemplate] = useState(
-    "Dear {name}, we received your payment of LKR {amount} for loan #{loanId} on {date}. Thank you."
+    "Dear {name}, we received your payment of LKR {amount} for loan #{loanId} on {date}. Your remaining balance is LKR {settlement}. Thank you."
   );
 
   const fetchRows = async () => {
@@ -80,7 +80,8 @@ export default function SendSMSPage() {
       .replaceAll("{name}", row.customerName || "Customer")
       .replaceAll("{amount}", (row.paidAmount ?? 0).toFixed(2))
       .replaceAll("{loanId}", String(row.loanId))
-      .replaceAll("{date}", dateStr);
+      .replaceAll("{date}", dateStr)
+      .replaceAll("{settlement}", (row.settlement ?? 0).toFixed(2));
   };
 
   const sendTo = async (rowsToSend) => {
@@ -146,7 +147,7 @@ export default function SendSMSPage() {
         </div>
         <div className="lg:col-span-1">
           <Textarea value={template} onChange={(e) => setTemplate(e.target.value)} rows={3} />
-          <div className="text-xs text-muted-foreground mt-1">Placeholders: {`{name}`} {`{amount}`} {`{loanId}`} {`{date}`}</div>
+          <div className="text-xs text-muted-foreground mt-1">Placeholders: {`{name}`} {`{amount}`} {`{loanId}`} {`{date}`} {`{settlement}`}</div>
         </div>
       </div>
 

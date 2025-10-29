@@ -16,6 +16,7 @@ export async function GET() {
         r.paid_amount as paidAmount,
         r.payment_method as paymentMethod,
         r.payment_date as createdAt,
+        r.setalment as settlement,
         r.balance as balanceAfter,
         lb.customerid as customerId,
         lb.Totalpay as totalPay,
@@ -38,6 +39,7 @@ export async function GET() {
       // allow a tiny tolerance for cents/rounding
       const epsilon = 0.01;
       const isCorrect = Math.abs(paid - perInstallment) <= epsilon;
+      const settlementVal = Number(row.settlement ?? 0);
       return {
         repaymentId: row.repaymentId,
         transactionId: row.transactionId,
@@ -47,6 +49,8 @@ export async function GET() {
         phone: row.phone,
         paidAmount: Number(paid.toFixed(2)),
         expectedInstallment: Number(perInstallment.toFixed(2)),
+        // settlement (remaining balance) from DB column r.setalment
+        settlement: Number(settlementVal.toFixed(2)),
         isCorrect,
         paymentMethod: row.paymentMethod,
         createdAt: row.createdAt,
