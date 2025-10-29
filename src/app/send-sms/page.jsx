@@ -22,14 +22,23 @@ export default function SendSMSPage() {
   const fetchRows = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/repayments/today", { cache: "no-store" });
-      const json = await res.json();
-      if (json.code !== "SUCCESS") throw new Error(json.message || "Failed to load");
-      const data = json.data || [];
-      setRows(data);
-      // default-select all correct ones
+      // Fetch repayments and today's SMS status concurrently
+      const [repRes, statusRes] = await Promise.all([
+        fetch("/api/repayments/today", { cache: "no-store" }),
+        fetch("/api/sms/status/today", { cache: "no-store" }),
+      ]);
+      const [repJson, statusJson] = await Promise.all([repRes.json(), statusRes.json()]);
+      if (repJson.code !== "SUCCESS") throw new Error(repJson.message || "Failed to load repayments");
+      if (statusJson.code !== "SUCCESS") throw new Error(statusJson.message || "Failed to load SMS status");
+
+      const data = repJson.data || [];
+      const sentSet = new Set((statusJson.data?.sentRepaymentIds || []).filter(Boolean));
+      const merged = data.map((r) => ({ ...r, smsSent: sentSet.has(r.repaymentId) }));
+
+      setRows(merged);
+      // default-select all correct and not already sent
       const nextSelected = new Set();
-      data.forEach((r) => { if (r.isCorrect) nextSelected.add(r.repaymentId); });
+      merged.forEach((r) => { if (r.isCorrect && !r.smsSent) nextSelected.add(r.repaymentId); });
       setSelected(nextSelected);
     } catch (e) {
       console.error(e);
@@ -54,7 +63,7 @@ export default function SendSMSPage() {
     return data;
   }, [rows, query]);
 
-  const allVisibleIds = filtered.map((r) => r.repaymentId);
+  const allVisibleIds = filtered.filter((r) => !r.smsSent).map((r) => r.repaymentId);
   const allVisibleSelected = allVisibleIds.every((id) => selected.has(id)) && allVisibleIds.length > 0;
 
   const toggleSelectAllVisible = () => {
@@ -104,12 +113,23 @@ export default function SendSMSPage() {
       });
       const json = await res.json();
       if (json.code !== "SUCCESS") throw new Error(json.message || "Send failed");
-      const ok = (json.data?.results || []).filter((r) => r.success).length;
+      const results = json.data?.results || [];
+      const ok = results.filter((r) => r.success).length;
       const total = recipients.length;
       if (json.data?.dryRun) {
         toast.info(`Dry-run: prepared ${ok}/${total} messages. Configure SMS provider to send.`);
       } else {
         toast.success(`Sent ${ok}/${total} messages`);
+        // Mark successfully sent rows as sent in local state
+        const successIds = new Set(
+          results.filter((x) => x.success && x.meta?.repaymentId).map((x) => x.meta.repaymentId)
+        );
+        setRows((prev) => prev.map((r) => (successIds.has(r.repaymentId) ? { ...r, smsSent: true } : r)));
+        setSelected((prev) => {
+          const next = new Set(Array.from(prev));
+          successIds.forEach((id) => next.delete(id));
+          return next;
+        });
       }
     } catch (e) {
       console.error(e);
@@ -120,7 +140,7 @@ export default function SendSMSPage() {
   };
 
   const sendSelected = () => {
-    const rowsToSend = rows.filter((r) => selected.has(r.repaymentId));
+    const rowsToSend = rows.filter((r) => selected.has(r.repaymentId) && !r.smsSent);
     sendTo(rowsToSend);
   };
 
@@ -179,7 +199,7 @@ export default function SendSMSPage() {
               return (
                 <TableRow key={r.repaymentId} className={isSel ? "bg-muted/40" : ""}>
                   <TableCell>
-                    <Checkbox checked={isSel} onCheckedChange={() => toggleSelect(r.repaymentId)} />
+                    <Checkbox checked={isSel} disabled={r.smsSent} onCheckedChange={() => toggleSelect(r.repaymentId)} />
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">{r.customerName}</div>
@@ -198,12 +218,19 @@ export default function SendSMSPage() {
                     ) : (
                       <Badge variant="outline" className="border-amber-500 text-amber-600"><XCircle className="h-3 w-3 mr-1"/>Different</Badge>
                     )}
+                    {r.smsSent && (
+                      <span className="ml-2 inline-flex items-center text-xs text-blue-600">• Sent</span>
+                    )}
                   </TableCell>
                   <TableCell>{new Date(r.createdAt).toLocaleString()}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" variant="secondary" onClick={() => sendTo([r])} disabled={loading}>
-                      <SendHorizontal className="h-4 w-4 mr-2" /> Send
-                    </Button>
+                    {r.smsSent ? (
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">Sent</Badge>
+                    ) : (
+                      <Button size="sm" variant="secondary" onClick={() => sendTo([r])} disabled={loading}>
+                        <SendHorizontal className="h-4 w-4 mr-2" /> Send
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               );
