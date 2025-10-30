@@ -16,7 +16,7 @@ export default function SendSMSPage() {
   const [selected, setSelected] = useState(new Set());
   const [query, setQuery] = useState("");
   const [template, setTemplate] = useState(
-    "Dear {name}, we received your payment of LKR {amount} for loan #{loanId} on {date}. Your remaining balance is LKR {settlement}. Thank you."
+    "Dear {name}, we have received your payment of LKR {amount} for Loan {loanId} on {date}. Your remaining balance is LKR {settlement}.New Town Abagasdowa.If you have any issues, please contact us at +94 70 555 8880.Thank you!"
   );
 
   const fetchRows = async () => {
